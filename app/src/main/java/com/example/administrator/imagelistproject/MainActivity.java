@@ -38,8 +38,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void OnItemClick(int position, ImageListAdapter.ImageListViewHolder holder) {
                 View v = holder.itemView;
-                mCustomItemAnimator.setEventPointX(v.getLeft());
+                mCustomItemAnimator.setEventX(v.getLeft());
                 if (mPrePosition == position){
+                    mCustomItemAnimator.setState(CustomItemAnimator.STATE_EXPANDING);
                     for (int i=mPrePosition+mPreSize;i>mPrePosition;i--) {
                         mData.remove(i);
                     }
@@ -48,6 +49,16 @@ public class MainActivity extends AppCompatActivity {
                     mPrePosition = -1;
                     mPreSize = 0;
                 }else {
+                    if (mPrePosition != -1){
+                        for (int i=mPrePosition+mPreSize;i>=mPrePosition+1;i--) {
+                            mData.remove(i);
+                        }
+                    }
+                    mImageListAdapter.notifyItemRangeRemoved(mPrePosition,mPreSize);
+                    mImageListAdapter.notifyItemRangeChanged(0,mData.size());
+                    if (position>mPrePosition)
+                        position -= mPreSize;
+                    mCustomItemAnimator.setState(CustomItemAnimator.STATE_SHRINKING);
                     ArrayList<String> newData = new ArrayList<>();
                     for (int i=0;i<5;i++) {
                         newData.add("new");
@@ -64,8 +75,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         mCustomItemAnimator = new CustomItemAnimator();
-//        mCustomItemAnimator.setAddDuration(400);
-//        mCustomItemAnimator.setMoveDuration(400);
+        mCustomItemAnimator.setAddDuration(200);
+        mCustomItemAnimator.setMoveDuration(200);
+        mCustomItemAnimator.setChangeDuration(200);
+        mCustomItemAnimator.setRemoveDuration(200);
 
 
     }
@@ -74,8 +87,8 @@ public class MainActivity extends AppCompatActivity {
         mRecyclerView = findViewById(R.id.rv_image_list);
         mRecyclerView.setLayoutManager(mLayoutManager);
         mRecyclerView.setAdapter(mImageListAdapter);
-        mRecyclerView.getItemAnimator().setMoveDuration(2000);
-//        mRecyclerView.setItemAnimator(mCustomItemAnimator);
+//        mRecyclerView.getItemAnimator().setMoveDuration(2000);
+        mRecyclerView.setItemAnimator(mCustomItemAnimator);
     }
 
 

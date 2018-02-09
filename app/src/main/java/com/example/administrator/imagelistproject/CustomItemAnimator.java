@@ -5,7 +5,6 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.TimeInterpolator;
 import android.animation.ValueAnimator;
 import android.support.annotation.NonNull;
-import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.RecyclerView.ViewHolder;
 import android.support.v7.widget.SimpleItemAnimator;
 import android.view.View;
@@ -16,6 +15,19 @@ import java.util.List;
 
 public class CustomItemAnimator extends SimpleItemAnimator {
     private static final boolean DEBUG = false;
+
+    public static final int STATE_EXPANDING = 101;//展开状态
+    public static final int STATE_SHRINKING = 102;//收缩状态
+    private int mState = STATE_SHRINKING;//默认为收缩态
+    private int mEventX = 0;//触发动画的所点击Item的Left值，用于动画中偏移值的计算
+
+    public void setEventX(int eventX) {
+        this.mEventX = eventX;
+    }
+
+    public void setState(int state) {
+        this.mState = state;
+    }
 
     private static TimeInterpolator sDefaultInterpolator;
 
@@ -108,12 +120,12 @@ public class CustomItemAnimator extends SimpleItemAnimator {
                     mMovesList.remove(moves);
                 }
             };
-            if (removalsPending) {
-                View view = moves.get(0).holder.itemView;
-                ViewCompat.postOnAnimationDelayed(view, mover, getRemoveDuration());
-            } else {
+//            if (removalsPending) {
+//                View view = moves.get(0).holder.itemView;
+//                ViewCompat.postOnAnimationDelayed(view, mover, getRemoveDuration());
+//            } else {
                 mover.run();
-            }
+//            }
         }
         // Next, change stuff, to run in parallel with move animations
         if (changesPending) {
@@ -131,12 +143,12 @@ public class CustomItemAnimator extends SimpleItemAnimator {
                     mChangesList.remove(changes);
                 }
             };
-            if (removalsPending) {
-                ViewHolder holder = changes.get(0).oldHolder;
-                ViewCompat.postOnAnimationDelayed(holder.itemView, changer, getRemoveDuration());
-            } else {
+//            if (removalsPending) {
+//                ViewHolder holder = changes.get(0).oldHolder;
+//                ViewCompat.postOnAnimationDelayed(holder.itemView, changer, getRemoveDuration());
+//            } else {
                 changer.run();
-            }
+//            }
         }
         // Next, add stuff
         if (additionsPending) {
@@ -154,16 +166,16 @@ public class CustomItemAnimator extends SimpleItemAnimator {
                     mAdditionsList.remove(additions);
                 }
             };
-            if (removalsPending || movesPending || changesPending) {
-                long removeDuration = removalsPending ? getRemoveDuration() : 0;
-                long moveDuration = movesPending ? getMoveDuration() : 0;
-                long changeDuration = changesPending ? getChangeDuration() : 0;
-                long totalDelay = removeDuration + Math.max(moveDuration, changeDuration);
-                View view = additions.get(0).itemView;
-                ViewCompat.postOnAnimationDelayed(view, adder, totalDelay);
-            } else {
+//            if (removalsPending || movesPending || changesPending) {
+//                long removeDuration = removalsPending ? getRemoveDuration() : 0;
+//                long moveDuration = movesPending ? getMoveDuration() : 0;
+//                long changeDuration = changesPending ? getChangeDuration() : 0;
+//                long totalDelay = removeDuration + Math.max(moveDuration, changeDuration);
+//                View view = additions.get(0).itemView;
+//                ViewCompat.postOnAnimationDelayed(view, adder, totalDelay);
+//            } else {
                 adder.run();
-            }
+//            }
         }
     }
 
@@ -178,7 +190,7 @@ public class CustomItemAnimator extends SimpleItemAnimator {
         final View view = holder.itemView;
         final ViewPropertyAnimator animation = view.animate();
         mRemoveAnimations.add(holder);
-        animation.setDuration(getRemoveDuration()).alpha(0).setListener(
+        animation.setDuration(getRemoveDuration()).setListener(
                 new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationStart(Animator animator) {
@@ -188,18 +200,23 @@ public class CustomItemAnimator extends SimpleItemAnimator {
                     @Override
                     public void onAnimationEnd(Animator animator) {
                         animation.setListener(null);
-                        view.setAlpha(1);
+                        view.setTranslationX(0);
                         dispatchRemoveFinished(holder);
                         mRemoveAnimations.remove(holder);
                         dispatchFinishedWhenDone();
                     }
-                }).start();
+                });
+        if (mState == STATE_EXPANDING) {
+            animation.translationX(mEventX-view.getLeft());
+        }else if(mState == STATE_SHRINKING){
+            animation.translationX(500);
+        }
     }
 
     @Override
     public boolean animateAdd(final ViewHolder holder) {
         resetAnimation(holder);
-        holder.itemView.setAlpha(0);
+        holder.itemView.setTranslationX(mEventX - holder.itemView.getLeft());
         mPendingAdditions.add(holder);
         return true;
     }
@@ -208,7 +225,7 @@ public class CustomItemAnimator extends SimpleItemAnimator {
         final View view = holder.itemView;
         final ViewPropertyAnimator animation = view.animate();
         mAddAnimations.add(holder);
-        animation.alpha(1).setDuration(getAddDuration())
+        animation.translationX(0).setDuration(getAddDuration())
                 .setListener(new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationStart(Animator animator) {
@@ -217,7 +234,7 @@ public class CustomItemAnimator extends SimpleItemAnimator {
 
                     @Override
                     public void onAnimationCancel(Animator animator) {
-                        view.setAlpha(1);
+                        view.setTranslationX(0);
                     }
 
                     @Override
@@ -417,7 +434,11 @@ public class CustomItemAnimator extends SimpleItemAnimator {
         // this will trigger end callback which should set properties to their target values.
         view.animate().cancel();
         // TODO if some other animations are chained to end, how do we cancel them as well?
-        //与PendingMove表中每个Item进行比对，找到时将其移出，然后进行对应动画的还原操作
+
+        /*
+            将item从对应mPending中移除，然后进行对应动画的还原操作
+         */
+
         for (int i = mPendingMoves.size() - 1; i >= 0; i--) {
             MoveInfo moveInfo = mPendingMoves.get(i);
             if (moveInfo.holder == item) {
@@ -429,14 +450,19 @@ public class CustomItemAnimator extends SimpleItemAnimator {
         }
         //抽了一个方法出来，用于结束掉change动画
         endChangeAnimation(mPendingChanges, item);
+        //
         if (mPendingRemovals.remove(item)) {
-            view.setAlpha(1);
+            view.setTranslationX(0);
             dispatchRemoveFinished(item);
         }
         if (mPendingAdditions.remove(item)) {
-            view.setAlpha(1);
+            view.setTranslationX(0);
             dispatchAddFinished(item);
         }
+
+        /*
+
+         */
 
         for (int i = mChangesList.size() - 1; i >= 0; i--) {
             ArrayList<ChangeInfo> changes = mChangesList.get(i);
@@ -464,7 +490,7 @@ public class CustomItemAnimator extends SimpleItemAnimator {
         for (int i = mAdditionsList.size() - 1; i >= 0; i--) {
             ArrayList<ViewHolder> additions = mAdditionsList.get(i);
             if (additions.remove(item)) {
-                view.setAlpha(1);
+                view.setTranslationX(0);
                 dispatchAddFinished(item);
                 if (additions.isEmpty()) {
                     mAdditionsList.remove(i);
@@ -553,7 +579,7 @@ public class CustomItemAnimator extends SimpleItemAnimator {
         count = mPendingAdditions.size();
         for (int i = count - 1; i >= 0; i--) {
             ViewHolder item = mPendingAdditions.get(i);
-            item.itemView.setAlpha(1);
+            item.itemView.setTranslationX(0);
             dispatchAddFinished(item);
             mPendingAdditions.remove(i);
         }
@@ -590,7 +616,7 @@ public class CustomItemAnimator extends SimpleItemAnimator {
             for (int j = count - 1; j >= 0; j--) {
                 ViewHolder item = additions.get(j);
                 View view = item.itemView;
-                view.setAlpha(1);
+                view.setTranslationX(0);
                 dispatchAddFinished(item);
                 additions.remove(j);
                 if (additions.isEmpty()) {
