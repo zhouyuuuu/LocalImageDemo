@@ -18,12 +18,20 @@ public class CustomItemAnimator extends SimpleItemAnimator {
 
     public static final int STATE_EXPANDING = 101;//正在展开
     public static final int STATE_SHRINKING = 102;//正在收缩
+    public static final int STATE_EXPANDING_EXPANDDINGOTHER = 103;//展开状态下，展开别的条目
     private int mState = STATE_SHRINKING;//默认为收缩态
     private int mEventX = 0;//触发动画的所点击Item的Left值，用于动画中偏移值的计算
     private View mEventView;
     private int mTranslationLeft;
     private int mTranslationRight;
     private int mScreenWidth;
+
+    public void setmOldEventView(View mOldEventView) {
+        this.mOldEventView = mOldEventView;
+    }
+
+    private View mOldEventView;
+
 
     public void setmScreenWidth(int mScreenWidth) {
         this.mScreenWidth = mScreenWidth;
@@ -133,6 +141,7 @@ public class CustomItemAnimator extends SimpleItemAnimator {
             animateRemoveImpl(holder);
         }
         mPendingRemovals.clear();
+
         // Next, move stuff
         if (movesPending) {
             final ArrayList<MoveInfo> moves = new ArrayList<>();
@@ -207,6 +216,8 @@ public class CustomItemAnimator extends SimpleItemAnimator {
                 adder.run();
 //            }
         }
+
+
     }
 
     @Override
@@ -244,13 +255,25 @@ public class CustomItemAnimator extends SimpleItemAnimator {
             }else {
                 animation.translationX(mTranslationRight);
             }
+        }else if (mState == STATE_EXPANDING_EXPANDDINGOTHER){
+            if (view.getTag()!=null&&view.getTag().equals("new")){
+                animation.translationX(mOldEventView.getLeft()-view.getLeft());
+            }else {
+                if (view.getLeft()<mEventX) {
+                    animation.translationX(-mTranslationLeft);
+                }else {
+                    animation.translationX(mTranslationRight);
+                }
+            }
         }
+        animation.start();
     }
 
     @Override
     public boolean animateAdd(final ViewHolder holder) {
         resetAnimation(holder);
         holder.itemView.setTranslationX(mEventX - holder.itemView.getLeft());
+        holder.itemView.setTag("new");
         mPendingAdditions.add(holder);
         return true;
     }

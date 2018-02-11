@@ -6,6 +6,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
+
 import java.util.ArrayList;
 
 //Created by Administrator on 2018/2/5.
@@ -27,18 +29,19 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     }
 
     @Override
-    public void onBindViewHolder(final ImageListAdapter.ImageListViewHolder holder, int position) {
-        final int pos = position;
-        if (!mData.get(pos).equals("new")) {
+    public void onBindViewHolder(final ImageListAdapter.ImageListViewHolder holder, final int position) {
+        if (!mData.get(position).equals("new")) {
             holder.iv.setImageResource(R.mipmap.ic_launcher);
+            holder.tv.setText(position+"");
         }else {
             holder.iv.setImageResource(R.mipmap.ic_launcher_round);
+            holder.tv.setText(position+"");
         }
         holder.iv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mItemClickListener!=null){
-                    mItemClickListener.OnItemClick(pos,holder);
+                    mItemClickListener.OnItemClick(position,holder);
                 }
             }
         });
@@ -50,10 +53,12 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     }
 
     static class ImageListViewHolder extends RecyclerView.ViewHolder {
+        TextView tv;
         ImageView iv;
         ImageListViewHolder(View itemView) {
             super(itemView);
             iv = itemView.findViewById(R.id.iv_image);
+            tv = itemView.findViewById(R.id.tv_image);
         }
     }
 
