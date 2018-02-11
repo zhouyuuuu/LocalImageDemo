@@ -16,10 +16,39 @@ import java.util.List;
 public class CustomItemAnimator extends SimpleItemAnimator {
     private static final boolean DEBUG = false;
 
-    public static final int STATE_EXPANDING = 101;//展开状态
-    public static final int STATE_SHRINKING = 102;//收缩状态
+    public static final int STATE_EXPANDING = 101;//正在展开
+    public static final int STATE_SHRINKING = 102;//正在收缩
     private int mState = STATE_SHRINKING;//默认为收缩态
     private int mEventX = 0;//触发动画的所点击Item的Left值，用于动画中偏移值的计算
+    private View mEventView;
+    private int mTranslationLeft;
+    private int mTranslationRight;
+    private int mScreenWidth;
+
+    public void setmScreenWidth(int mScreenWidth) {
+        this.mScreenWidth = mScreenWidth;
+    }
+
+    public void setTranslationLeftAndRight(){
+        mTranslationLeft=0;
+        mTranslationRight=0;
+        for(ViewHolder holder:mPendingRemovals){
+            if (holder.itemView.getLeft()<mEventX){
+                int translation = holder.itemView.getRight();
+                if (mTranslationLeft < translation)
+                    mTranslationLeft = translation;
+            }else if (holder.itemView.getLeft()>mEventX){
+                int translation = mScreenWidth-holder.itemView.getLeft();
+                if (mTranslationRight < translation)
+                    mTranslationRight = translation;
+
+            }
+        }
+    }
+
+    public void setEventView(View mEventView) {
+        this.mEventView = mEventView;
+    }
 
     public void setEventX(int eventX) {
         this.mEventX = eventX;
@@ -99,6 +128,7 @@ public class CustomItemAnimator extends SimpleItemAnimator {
             return;
         }
         // First, remove stuff
+        setTranslationLeftAndRight();
         for (ViewHolder holder : mPendingRemovals) {
             animateRemoveImpl(holder);
         }
@@ -206,10 +236,14 @@ public class CustomItemAnimator extends SimpleItemAnimator {
                         dispatchFinishedWhenDone();
                     }
                 });
-        if (mState == STATE_EXPANDING) {
-            animation.translationX(mEventX-view.getLeft());
-        }else if(mState == STATE_SHRINKING){
-            animation.translationX(500);
+        if (mState == STATE_SHRINKING) {
+            animation.translationX(mEventView.getLeft()-view.getLeft());
+        }else if(mState == STATE_EXPANDING){
+            if (view.getLeft()<mEventX) {
+                animation.translationX(-mTranslationLeft);
+            }else {
+                animation.translationX(mTranslationRight);
+            }
         }
     }
 
