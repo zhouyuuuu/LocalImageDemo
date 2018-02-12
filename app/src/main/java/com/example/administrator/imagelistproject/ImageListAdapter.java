@@ -13,10 +13,12 @@ import java.util.ArrayList;
 //Created by Administrator on 2018/2/5.
 
 public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.ImageListViewHolder> {
-    public static final String TAG = "new";
+    static final String TAG = "new";
     private LayoutInflater mLayoutInflater;
     private ArrayList<String> mData;
     private ItemClickListener mItemClickListener;
+    private static final int TYPE_ITEM = 101;
+    private static final int TYPE_SUB_ITEM = 102;//这个是被展开出来的子项
 
     ImageListAdapter(Context context, ArrayList<String> data) {
         this.mLayoutInflater = LayoutInflater.from(context);
@@ -25,8 +27,17 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
 
     @Override
     public ImageListAdapter.ImageListViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View v = mLayoutInflater.inflate(R.layout.view_imagelist_item,parent,false);
-        return new ImageListViewHolder(v);
+        View v;
+        switch (viewType){
+            case TYPE_ITEM:
+                v = mLayoutInflater.inflate(R.layout.view_imagelist_item,parent,false);
+                return new ImageListViewHolder(v);
+            case TYPE_SUB_ITEM:
+                v = mLayoutInflater.inflate(R.layout.view_imagelist_subitem,parent,false);
+                return new ImageListViewHolder(v);
+            default:
+                return null;
+        }
     }
 
     @Override
@@ -47,6 +58,15 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
                 }
             }
         });
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        if (mData.get(position).equals("new")){
+            return TYPE_SUB_ITEM;
+        }else {
+            return TYPE_ITEM;
+        }
     }
 
     @Override

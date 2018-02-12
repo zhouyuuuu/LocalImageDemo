@@ -28,8 +28,10 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
     private ArrayList<RecyclerView.ViewHolder> mMoveAnimations = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mRemoveAnimations = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mChangeAnimations = new ArrayList<>();
+    //被点击的View及其位置
     private View mClickedView;
     private int mClickedX;
+    //remove向左和向右平移距离
     private int translateLeftX;
     private int translateRightX;
 
@@ -102,6 +104,9 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
         mScreenWidth = width;
     }
 
+    /**
+     * 计算Remove向左和向右平移的距离
+     */
     private void calculateTranslateX() {
         translateRightX = Integer.MIN_VALUE;
         translateLeftX = Integer.MIN_VALUE;
@@ -129,8 +134,10 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
         final ViewPropertyAnimator animation = view.animate();
         mRemoveAnimations.add(holder);
         if (view.getTag()!=null&&view.getTag().equals(ImageListAdapter.TAG)&&mClickedView!=null){
+            //SubView向点击的View收缩平移
             animation.translationX(mClickedView.getLeft()-view.getLeft());
         }else {
+            //在点击的View左边的向左平移，在右边的向右平移
             if (view.getLeft()<mClickedView.getLeft()){
                 animation.translationX(-translateLeftX);
             }else {
@@ -159,6 +166,7 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
     public boolean animateAdd(final RecyclerView.ViewHolder holder) {
         if (mClickedView != null) {
             resetAnimation(holder);
+            //先平移到点击的View的位置，然后归零，就是展开效果了
             holder.itemView.setTranslationX(mClickedX - holder.itemView.getLeft());
             mPendingAdditions.add(holder);
             return true;
