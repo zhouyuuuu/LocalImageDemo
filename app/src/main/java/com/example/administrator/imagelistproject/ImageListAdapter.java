@@ -1,5 +1,6 @@
 package com.example.administrator.imagelistproject;
 
+
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -7,12 +8,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import java.util.ArrayList;
 
 //Created by Administrator on 2018/2/5.
 
 public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.ImageListViewHolder> {
+    public static final String TAG = "new";
     private LayoutInflater mLayoutInflater;
     private ArrayList<String> mData;
     private ItemClickListener mItemClickListener;
@@ -29,19 +30,20 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     }
 
     @Override
-    public void onBindViewHolder(final ImageListAdapter.ImageListViewHolder holder, final int position) {
+    public void onBindViewHolder(final ImageListAdapter.ImageListViewHolder holder,int position) {
         if (!mData.get(position).equals("new")) {
             holder.iv.setImageResource(R.mipmap.ic_launcher);
-            holder.tv.setText(position+"");
+            holder.tv.setText(String.valueOf(position));
         }else {
+            holder.itemView.setTag(TAG);
             holder.iv.setImageResource(R.mipmap.ic_launcher_round);
-            holder.tv.setText(position+"");
+            holder.tv.setText(String.valueOf(position));
         }
         holder.iv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mItemClickListener!=null){
-                    mItemClickListener.OnItemClick(position,holder);
+                    mItemClickListener.OnItemClick(holder.getAdapterPosition(),holder);
                 }
             }
         });
@@ -64,7 +66,7 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
 
 
 
-    public void setItemClickListener(ItemClickListener itemClickListener){
+    void setItemClickListener(ItemClickListener itemClickListener){
         mItemClickListener = itemClickListener;
     }
 
