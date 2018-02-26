@@ -13,6 +13,7 @@ import android.view.ViewPropertyAnimator;
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class RewriteItemAnimator extends SimpleItemAnimator {
 
     private static final boolean DEBUG = false;
@@ -31,15 +32,24 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
     //被点击的View及其位置
     private View mClickedView;
     private int mClickedX;
+    //上一次被点击的View
+    private View mLastClickedView;
     //remove向左和向右平移距离
     private int translateLeftX;
     private int translateRightX;
+    private boolean existExtendedItem = false;
+    private int mScreenWidth;
 
-    public void setClickedX(int mClickedX) {
+    void setExistExtendedItem(boolean existExtendedItem) {
+        this.existExtendedItem = existExtendedItem;
+    }
+
+    void setClickedX(int mClickedX) {
         this.mClickedX = mClickedX;
     }
 
-    void setClickedView(View v){
+    void setClickedView(View v) {
+        this.mLastClickedView = mClickedView;
         mClickedView = v;
     }
 
@@ -98,9 +108,7 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
         }
     }
 
-    private int mScreenWidth;
-
-    void setScreenWidth(int width){
+    void setScreenWidth(int width) {
         mScreenWidth = width;
     }
 
@@ -110,14 +118,14 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
     private void calculateTranslateX() {
         translateRightX = Integer.MIN_VALUE;
         translateLeftX = Integer.MIN_VALUE;
-        for (RecyclerView.ViewHolder holder:mPendingRemovals){
+        for (RecyclerView.ViewHolder holder : mPendingRemovals) {
             View view = holder.itemView;
-            if(view.getLeft()<mClickedView.getLeft()){
+            if (view.getLeft() < mClickedView.getLeft()) {
                 int x = view.getRight();
-                translateLeftX = translateLeftX<x?x:translateLeftX;
-            }else {
+                translateLeftX = translateLeftX < x ? x : translateLeftX;
+            } else {
                 int x = mScreenWidth - view.getLeft();
-                translateRightX = translateRightX<x?x:translateLeftX;
+                translateRightX = translateRightX < x ? x : translateLeftX;
             }
         }
     }
@@ -133,14 +141,18 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
         final View view = holder.itemView;
         final ViewPropertyAnimator animation = view.animate();
         mRemoveAnimations.add(holder);
-        if (view.getTag()!=null&&view.getTag().equals(ImageListAdapter.TAG)&&mClickedView!=null){
-            //SubView向点击的View收缩平移
-            animation.translationX(mClickedView.getLeft()-view.getLeft());
-        }else {
+        if (view.getTag() != null && view.getTag().equals(ImageListAdapter.TAG) && mClickedView != null) {
+            if (!existExtendedItem) {
+                //SubView向点击的View收缩平移
+                animation.translationX((mClickedView.getLeft() + mClickedView.getRight()) / 2 - (view.getLeft() + view.getRight()) / 2);
+            } else {
+                animation.translationX((mLastClickedView.getLeft() + mLastClickedView.getRight()) / 2 - (view.getLeft() + view.getRight()) / 2);
+            }
+        } else {
             //在点击的View左边的向左平移，在右边的向右平移
-            if (view.getLeft()<mClickedView.getLeft()){
+            if (view.getLeft() < mClickedView.getLeft()) {
                 animation.translationX(-translateLeftX);
-            }else {
+            } else {
                 animation.translationX(translateRightX);
             }
         }
@@ -167,10 +179,10 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
         if (mClickedView != null) {
             resetAnimation(holder);
             //先平移到点击的View的位置，然后归零，就是展开效果了
-            holder.itemView.setTranslationX(mClickedX - holder.itemView.getLeft());
+            holder.itemView.setTranslationX(mClickedX - (holder.itemView.getLeft()+holder.itemView.getRight())/2);
             mPendingAdditions.add(holder);
             return true;
-        }else {
+        } else {
             return false;
         }
     }
@@ -234,9 +246,6 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
         if (deltaY != 0) {
             view.animate().translationY(0);
         }
-        // make EndActions end listeners instead, since end actions aren't called when
-        // vpas are canceled (and can't end them. why?)
-        // need listener functionality in VPACompat for this. Ick.
         final ViewPropertyAnimator animation = view.animate();
         mMoveAnimations.add(holder);
         animation.setDuration(getMoveDuration()).setListener(new AnimatorListenerAdapter() {
