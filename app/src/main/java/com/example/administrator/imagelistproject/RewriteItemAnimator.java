@@ -18,13 +18,16 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
 
     private static final boolean DEBUG = false;
     private static TimeInterpolator sDefaultInterpolator;
+
     private ArrayList<RecyclerView.ViewHolder> mPendingRemovals = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mPendingAdditions = new ArrayList<>();
     private ArrayList<MoveInfo> mPendingMoves = new ArrayList<>();
     private ArrayList<ChangeInfo> mPendingChanges = new ArrayList<>();
+
     private ArrayList<ArrayList<RecyclerView.ViewHolder>> mAdditionsList = new ArrayList<>();
     private ArrayList<ArrayList<MoveInfo>> mMovesList = new ArrayList<>();
     private ArrayList<ArrayList<ChangeInfo>> mChangesList = new ArrayList<>();
+
     private ArrayList<RecyclerView.ViewHolder> mAddAnimations = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mMoveAnimations = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mRemoveAnimations = new ArrayList<>();
@@ -37,7 +40,9 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
     //remove向左和向右平移距离
     private int translateLeftX;
     private int translateRightX;
+    //是否存在被展开的其他项
     private boolean existExtendedItem = false;
+    //屏幕宽度
     private int mScreenWidth;
 
     void setExistExtendedItem(boolean existExtendedItem) {
@@ -63,8 +68,9 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
             // nothing to animate
             return;
         }
-
+        //计算translationLeftX和translateRightX
         calculateTranslateX();
+
         for (RecyclerView.ViewHolder holder : mPendingRemovals) {
             animateRemoveImpl(holder);
         }
@@ -142,14 +148,16 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
         final ViewPropertyAnimator animation = view.animate();
         mRemoveAnimations.add(holder);
         if (view.getTag() != null && view.getTag().equals(ImageListAdapter.TAG) && mClickedView != null) {
+            //根据是否存在被展开的其他项，如果是则向被点击的View平移，否则向前一个被点击的View平移
             if (!existExtendedItem) {
                 //SubView向点击的View收缩平移
                 animation.translationX((mClickedView.getLeft() + mClickedView.getRight()) / 2 - (view.getLeft() + view.getRight()) / 2);
             } else {
+                //SubView向前一个点击的View收缩平移
                 animation.translationX((mLastClickedView.getLeft() + mLastClickedView.getRight()) / 2 - (view.getLeft() + view.getRight()) / 2);
             }
         } else {
-            //在点击的View左边的向左平移，在右边的向右平移
+            //不是SubView的话，在点击的View左边的向左平移，在右边的向右平移
             if (view.getLeft() < mClickedView.getLeft()) {
                 animation.translationX(-translateLeftX);
             } else {

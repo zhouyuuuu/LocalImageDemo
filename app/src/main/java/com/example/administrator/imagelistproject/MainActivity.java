@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
                 if (mData.get(position).equals(DATA_FAKE_DEFAULT)) return;
                 //将被点击的View及其位置传递给ItemAnimator
                 mRewriteItemAnimator.setClickedView(holder.itemView);
+                //传入View的中点坐标
                 mRewriteItemAnimator.setClickedX((holder.itemView.getLeft()+holder.itemView.getRight())/2);
                 //判断该位置在mMarkList中是否有值，如果是0，则该item没有被展开，如果有值，该值为该item的子项数目
                 if (mMarkList.get(position) == 0) {
@@ -78,14 +79,16 @@ public class MainActivity extends AppCompatActivity {
                     if (existExtendedItem) {
                         //设置存在被展开的其他项
                         mRewriteItemAnimator.setExistExtendedItem(true);
-                        final int finalSubItemCount = lastExtendedSubItemCount;
-                        final int finalExtendedItemPosition = lastExtendedPosition;
+                        final int finalSubItemCount = lastExtendedSubItemCount;//要收起的子项数目
+                        final int finalExtendedItemPosition = lastExtendedPosition;//要收起的项的位置
                         holder.itemView.postDelayed(new Runnable() {
                             @Override
                             public void run() {
                                 mMarkList.set(finalExtendedItemPosition, 0);
                                 for (int i = 0; i < finalSubItemCount; i++) {
+                                    //删除数据
                                     mData.remove(finalExtendedItemPosition + 1);
+                                    //列表同步
                                     mMarkList.remove(finalExtendedItemPosition + 1);
                                 }
                                 //执行该函数来触发Remove动画
