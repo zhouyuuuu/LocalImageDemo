@@ -1,4 +1,4 @@
-package com.example.administrator.imagelistproject;
+package com.example.administrator.imagelistproject.view;
 
 
 import android.content.Context;
@@ -8,6 +8,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.example.administrator.imagelistproject.model.ImageLoader;
+import com.example.administrator.imagelistproject.R;
+import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
 
 import java.util.ArrayList;
 
@@ -23,11 +27,13 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     private ArrayList<Long[]> mData;
     private ItemClickListener mItemClickListener;
     private Context mContext;
+    private LoadImagePresenter mLoadImagePresenter;
 
-    ImageListAdapter(Context context, ArrayList<Long[]> data) {
+    ImageListAdapter(Context context, ArrayList<Long[]> data,LoadImagePresenter loadImagePresenter) {
         mContext = context;
         this.mLayoutInflater = LayoutInflater.from(context);
         this.mData = data;
+        mLoadImagePresenter = loadImagePresenter;
     }
 
     @Override
@@ -48,7 +54,7 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
 
     @Override
     public void onBindViewHolder(final ImageListAdapter.ImageListViewHolder holder, int position) {
-        holder.iv.setImageBitmap(ImageLoader.getThumbnailBitmap(mData.get(position)[0], mContext));
+        holder.iv.setImageBitmap(mLoadImagePresenter.getThumbnailBitmap(mData.get(position)[0], mContext));
         holder.iv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

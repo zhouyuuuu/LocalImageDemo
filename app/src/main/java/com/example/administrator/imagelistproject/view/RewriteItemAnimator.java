@@ -1,4 +1,4 @@
-package com.example.administrator.imagelistproject;
+package com.example.administrator.imagelistproject.view;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -9,7 +9,6 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SimpleItemAnimator;
 import android.view.View;
 import android.view.ViewPropertyAnimator;
-
 import java.util.ArrayList;
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.example.administrator.imagelistproject;
+package com.example.administrator.imagelistproject.model;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -15,7 +15,7 @@ import static android.provider.MediaStore.Images.Thumbnails.MICRO_KIND;
  * Edited by Administrator on 2018/2/27.
  */
 
-class ImageLoader {
+public class ImageLoader implements IModel {
 
     /**
      * 通过Cursor拿到所有图片的路径，每拿到一张图片，对其路径提取出文件名，如果folderNames中存在该文件名，就通过文件名找到对应分组在分组列表中的位置后将图片添加进去，如果不存在则创建一个新分组，folderNames中记录该分组名以及
@@ -24,7 +24,8 @@ class ImageLoader {
      * @param context 上下文
      * @return 返回一个列表，列表存放图片的所有分组
      */
-    static ArrayList<ArrayList<Long>> loadLocalImageThumbnailId(Context context) {
+    @Override
+    public ArrayList<ArrayList<Long>> loadLocalImageThumbnailId(Context context) {
         ArrayList<ArrayList<Long>> localImageThumbnailIds = new ArrayList<>();
         Cursor cursor = context.getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null, null);
         HashMap<String, Integer> folderNames = new HashMap<>();
@@ -61,7 +62,7 @@ class ImageLoader {
      * @param context 上下文
      * @return 返回图片的缩略图ID
      */
-    private static long getDbId(String path, Context context) {
+    private long getDbId(String path, Context context) {
         Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         String selection = MediaStore.MediaColumns.DATA + "=?";
         String[] selectionArgs = new String[]{
@@ -90,7 +91,8 @@ class ImageLoader {
      * @param context 上下文
      * @return 返回缩略图
      */
-    static Bitmap getThumbnailBitmap(long id, Context context) {
+    @Override
+    public Bitmap getThumbnailBitmap(long id, Context context) {
         return MediaStore.Images.Thumbnails.getThumbnail(context.getContentResolver(), id, MICRO_KIND,
                 null);
     }

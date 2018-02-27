@@ -1,9 +1,13 @@
-package com.example.administrator.imagelistproject;
+package com.example.administrator.imagelistproject.view;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.View;
+import android.widget.ProgressBar;
+import com.example.administrator.imagelistproject.R;
+import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
 
 import java.util.ArrayList;
 
@@ -11,7 +15,7 @@ import java.util.ArrayList;
  * Edited by Administrator on 2018/2/27.
  */
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements IView {
 
     private static final int ANIMATOR_INTERVAL_DEFAULT = 200;//默认的动画时间
     RecyclerView mRecyclerView;
@@ -21,25 +25,27 @@ public class MainActivity extends AppCompatActivity {
     private ImageListAdapter mImageListAdapter;
     private LinearLayoutManager mLayoutManager;
     private RewriteItemAnimator mRewriteItemAnimator;//重新写的ItemAnimator
+    private ProgressBar mProgressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        initData();
         initView();
+        initData();
     }
 
     private void initData() {
+        LoadImagePresenter mLoadImagePresenter = new LoadImagePresenter(this);
         //获得所有本地图片ID
-        mData = ImageLoader.loadLocalImageThumbnailId(this);
+        mData = mLoadImagePresenter.loadLocalImageThumbnailId(this);
         mDataToShow = new ArrayList<>();
         //先添加每个文件夹的第一张图片
         for (ArrayList<Long> ids : mData) {
             mDataToShow.add(new Long[]{ids.get(0), (long) ImageListAdapter.TYPE_ITEM});
             mMarkList.add(0);
         }
-        mImageListAdapter = new ImageListAdapter(this, mDataToShow);
+        mImageListAdapter = new ImageListAdapter(this, mDataToShow,mLoadImagePresenter);
         mLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
         mImageListAdapter.setItemClickListener(new ImageListAdapter.ItemClickListener() {
             @Override
@@ -138,14 +144,24 @@ public class MainActivity extends AppCompatActivity {
         mRewriteItemAnimator.setRemoveDuration(ANIMATOR_INTERVAL_DEFAULT);
         //设置屏幕宽度用于Remove位移计算
         mRewriteItemAnimator.setScreenWidth(this.getWindowManager().getDefaultDisplay().getWidth());
-    }
-
-    private void initView() {
-        mRecyclerView = findViewById(R.id.rv_image_list);
         mRecyclerView.setLayoutManager(mLayoutManager);
         mRecyclerView.setAdapter(mImageListAdapter);
         mRecyclerView.setItemAnimator(mRewriteItemAnimator);
     }
 
+    private void initView() {
+        mProgressBar = findViewById(R.id.pb);
+        mRecyclerView = findViewById(R.id.rv_image_list);
+    }
 
+
+    @Override
+    public void showProgressBar() {
+        mProgressBar.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void hideProgressBar() {
+        mProgressBar.setVisibility(View.GONE);
+    }
 }
