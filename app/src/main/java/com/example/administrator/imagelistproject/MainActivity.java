@@ -7,14 +7,17 @@ import android.support.v7.widget.RecyclerView;
 
 import java.util.ArrayList;
 
+/**
+ * Edited by Administrator on 2018/2/27.
+ */
+
 public class MainActivity extends AppCompatActivity {
 
-    private static final int ANIMATOR_INTERVAL_DEFAULT = 200;
-    private static final String DATA_FAKE_DEFAULT = "new";
-    private static final String DATA_ORIGIN_DEFAULT = "origin";
+    private static final int ANIMATOR_INTERVAL_DEFAULT = 200;//默认的动画时间
     RecyclerView mRecyclerView;
-    ArrayList<String> mData = new ArrayList<>();//RecyclerView数据集
-    private ArrayList<Integer> mMarkList = new ArrayList<>();
+    ArrayList<ArrayList<Long>> mData;//所有的图片ID数据
+    ArrayList<Long[]> mDataToShow;//用于展示的图片ID
+    private ArrayList<Integer> mMarkList = new ArrayList<>();//用于记录被展开的Item位置以及展开子项数
     private ImageListAdapter mImageListAdapter;
     private LinearLayoutManager mLayoutManager;
     private RewriteItemAnimator mRewriteItemAnimator;//重新写的ItemAnimator
@@ -28,30 +31,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initData() {
-        //默认数据
-        for (int i = 0; i < 10; i++) {
-            mData.add(DATA_ORIGIN_DEFAULT);
+        //获得所有本地图片ID
+        mData = ImageLoader.loadLocalImageThumbnailId(this);
+        mDataToShow = new ArrayList<>();
+        //先添加每个文件夹的第一张图片
+        for (ArrayList<Long> ids : mData) {
+            mDataToShow.add(new Long[]{ids.get(0), (long) ImageListAdapter.TYPE_ITEM});
             mMarkList.add(0);
         }
-        mImageListAdapter = new ImageListAdapter(this, mData);
+        mImageListAdapter = new ImageListAdapter(this, mDataToShow);
         mLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
         mImageListAdapter.setItemClickListener(new ImageListAdapter.ItemClickListener() {
             @Override
             public void OnItemClick(int position, ImageListAdapter.ImageListViewHolder holder) {
                 //点击项为子项时暂不进行操作
-                if (mData.get(position).equals(DATA_FAKE_DEFAULT)) return;
+                if (mDataToShow.get(position)[1] == ImageListAdapter.TYPE_SUB_ITEM) return;
                 //将被点击的View及其位置传递给ItemAnimator
                 mRewriteItemAnimator.setClickedView(holder.itemView);
                 //传入View的中点坐标
-                mRewriteItemAnimator.setClickedX((holder.itemView.getLeft()+holder.itemView.getRight())/2);
+                mRewriteItemAnimator.setClickedX((holder.itemView.getLeft() + holder.itemView.getRight()) / 2);
                 //判断该位置在mMarkList中是否有值，如果是0，则该item没有被展开，如果有值，该值为该item的子项数目
                 if (mMarkList.get(position) == 0) {
-                    //默认添加假数据
-                    ArrayList<String> newData = new ArrayList<>();
-                    for (int i = 0; i < 5; i++) {
-                        newData.add(DATA_FAKE_DEFAULT);
+                    //寻找点击的Item在mData中的位置
+                    int index = -1;
+                    for (int i = 0; i <= position; i++) {
+                        if (mDataToShow.get(i)[1] == ImageListAdapter.TYPE_ITEM) {
+                            index++;
+                        }
                     }
-                    mData.addAll(position + 1, newData);
+                    //将点击Item所属mData的项从第一张图片开始导入到mDataToShow中
+                    ArrayList<Long> newData = mData.get(index);
+                    for (int i = newData.size() - 1; i >= 0; i--) {
+                        mDataToShow.add(position + 1, new Long[]{newData.get(i), (long) ImageListAdapter.TYPE_SUB_ITEM});
+                    }
                     //将展开信息同步到mMarkList
                     for (int i = 0; i < newData.size(); i++) {
                         mMarkList.add(position + 1, 0);
@@ -87,12 +99,13 @@ public class MainActivity extends AppCompatActivity {
                                 mMarkList.set(finalExtendedItemPosition, 0);
                                 for (int i = 0; i < finalSubItemCount; i++) {
                                     //删除数据
-                                    mData.remove(finalExtendedItemPosition + 1);
+                                    mDataToShow.remove(finalExtendedItemPosition + 1);
                                     //列表同步
                                     mMarkList.remove(finalExtendedItemPosition + 1);
                                 }
                                 //执行该函数来触发Remove动画
                                 mImageListAdapter.notifyItemRangeRemoved(finalExtendedItemPosition + 1, finalSubItemCount);
+//                                mImageListAdapter.notifyItemRangeChanged(finalExtendedItemPosition + 1, finalSubItemCount);
                             }
                         }, ANIMATOR_INTERVAL_DEFAULT);
                     }
@@ -105,13 +118,13 @@ public class MainActivity extends AppCompatActivity {
                     mMarkList.set(position, 0);
                     //删除子项，并同步到mMarkList
                     for (int i = position + size; i > position; i--) {
-                        mData.remove(i);
+                        mDataToShow.remove(i);
                         mMarkList.remove(i);
                     }
                     //执行该函数来触发Remove动画
                     mImageListAdapter.notifyItemRangeRemoved(position + 1, size);
                     //该操作用于更新RecyclerView的position，因为Add和Remove后RecyclerView中item的position没有自动更新，引起错乱
-                    mImageListAdapter.notifyItemRangeChanged(position + 1, size);
+                    mImageListAdapter.notifyItemRangeChanged(position + 1, mDataToShow.size() - position - 1);
                     //被点击项滑动至最左边
                     mLayoutManager.scrollToPositionWithOffset(position, 0);
                 }

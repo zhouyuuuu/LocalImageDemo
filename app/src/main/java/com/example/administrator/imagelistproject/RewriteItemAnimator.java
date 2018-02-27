@@ -13,6 +13,9 @@ import android.view.ViewPropertyAnimator;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Edited by Administrator on 2018/2/27.
+ */
 
 public class RewriteItemAnimator extends SimpleItemAnimator {
 
@@ -187,7 +190,7 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
         if (mClickedView != null) {
             resetAnimation(holder);
             //先平移到点击的View的位置，然后归零，就是展开效果了
-            holder.itemView.setTranslationX(mClickedX - (holder.itemView.getLeft()+holder.itemView.getRight())/2);
+            holder.itemView.setTranslationX(mClickedX - (holder.itemView.getLeft() + holder.itemView.getRight()) / 2);
             mPendingAdditions.add(holder);
             return true;
         } else {
@@ -305,7 +308,6 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
             resetAnimation(newHolder);
             newHolder.itemView.setTranslationX(-deltaX);
             newHolder.itemView.setTranslationY(-deltaY);
-            newHolder.itemView.setAlpha(0);
         }
         mPendingChanges.add(new ChangeInfo(oldHolder, newHolder, fromX, fromY, toX, toY));
         return true;
@@ -322,7 +324,7 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
             mChangeAnimations.add(changeInfo.oldHolder);
             oldViewAnim.translationX(changeInfo.toX - changeInfo.fromX);
             oldViewAnim.translationY(changeInfo.toY - changeInfo.fromY);
-            oldViewAnim.alpha(0).setListener(new AnimatorListenerAdapter() {
+            oldViewAnim.setListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationStart(Animator animator) {
                     dispatchChangeStarting(changeInfo.oldHolder, true);
@@ -331,7 +333,6 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
                 @Override
                 public void onAnimationEnd(Animator animator) {
                     oldViewAnim.setListener(null);
-                    view.setAlpha(1);
                     view.setTranslationX(0);
                     view.setTranslationY(0);
                     dispatchChangeFinished(changeInfo.oldHolder, true);
@@ -344,23 +345,22 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
             final ViewPropertyAnimator newViewAnimation = newView.animate();
             mChangeAnimations.add(changeInfo.newHolder);
             newViewAnimation.translationX(0).translationY(0).setDuration(getChangeDuration())
-                    .alpha(1).setListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationStart(Animator animator) {
-                    dispatchChangeStarting(changeInfo.newHolder, false);
-                }
+                    .setListener(new AnimatorListenerAdapter() {
+                        @Override
+                        public void onAnimationStart(Animator animator) {
+                            dispatchChangeStarting(changeInfo.newHolder, false);
+                        }
 
-                @Override
-                public void onAnimationEnd(Animator animator) {
-                    newViewAnimation.setListener(null);
-                    newView.setAlpha(1);
-                    newView.setTranslationX(0);
-                    newView.setTranslationY(0);
-                    dispatchChangeFinished(changeInfo.newHolder, false);
-                    mChangeAnimations.remove(changeInfo.newHolder);
-                    dispatchFinishedWhenDone();
-                }
-            }).start();
+                        @Override
+                        public void onAnimationEnd(Animator animator) {
+                            newViewAnimation.setListener(null);
+                            newView.setTranslationX(0);
+                            newView.setTranslationY(0);
+                            dispatchChangeFinished(changeInfo.newHolder, false);
+                            mChangeAnimations.remove(changeInfo.newHolder);
+                            dispatchFinishedWhenDone();
+                        }
+                    }).start();
         }
     }
 
