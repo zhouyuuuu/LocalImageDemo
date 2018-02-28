@@ -1,15 +1,19 @@
 package com.example.administrator.imagelistproject.view;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.ProgressBar;
+
 import com.example.administrator.imagelistproject.R;
+import com.example.administrator.imagelistproject.model.ImageCache;
 import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
 
 import java.util.ArrayList;
+
 
 /**
  * Edited by Administrator on 2018/2/27.
@@ -26,6 +30,9 @@ public class MainActivity extends AppCompatActivity implements IView {
     private LinearLayoutManager mLayoutManager;
     private RewriteItemAnimator mRewriteItemAnimator;//重新写的ItemAnimator
     private ProgressBar mProgressBar;
+    private LoadImagePresenter mLoadImagePresenter;
+    private ImageCache mImages;
+    private Context mContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,20 +40,28 @@ public class MainActivity extends AppCompatActivity implements IView {
         setContentView(R.layout.activity_main);
         initView();
         initData();
+        //获得所有本地图片ID
+        mLoadImagePresenter.loadLocalImageThumbnailId(this);
     }
 
     private void initData() {
-        LoadImagePresenter mLoadImagePresenter = new LoadImagePresenter(this);
-        //获得所有本地图片ID
-        mData = mLoadImagePresenter.loadLocalImageThumbnailId(this);
+        mContext = this;
+        mLoadImagePresenter = new LoadImagePresenter(this);
         mDataToShow = new ArrayList<>();
-        //先添加每个文件夹的第一张图片
-        for (ArrayList<Long> ids : mData) {
-            mDataToShow.add(new Long[]{ids.get(0), (long) ImageListAdapter.TYPE_ITEM});
-            mMarkList.add(0);
-        }
-        mImageListAdapter = new ImageListAdapter(this, mDataToShow,mLoadImagePresenter);
-        mLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        mImages = new ImageCache();
+        mRewriteItemAnimator = new RewriteItemAnimator();
+        //设置动画时间保证各动画同步执行
+        mRewriteItemAnimator.setAddDuration(ANIMATOR_INTERVAL_DEFAULT);
+        mRewriteItemAnimator.setMoveDuration(ANIMATOR_INTERVAL_DEFAULT);
+        mRewriteItemAnimator.setChangeDuration(ANIMATOR_INTERVAL_DEFAULT);
+        mRewriteItemAnimator.setRemoveDuration(ANIMATOR_INTERVAL_DEFAULT);
+        //设置屏幕宽度用于Remove位移计算
+        mRewriteItemAnimator.setScreenWidth(this.getWindowManager().getDefaultDisplay().getWidth());
+        mImageListAdapter = new ImageListAdapter(mContext, mDataToShow, mImages, mRecyclerView);
+        mLayoutManager = new LinearLayoutManager(mContext, LinearLayoutManager.HORIZONTAL, false);
+        mRecyclerView.setLayoutManager(mLayoutManager);
+        mRecyclerView.setAdapter(mImageListAdapter);
+        mRecyclerView.setItemAnimator(mRewriteItemAnimator);
         mImageListAdapter.setItemClickListener(new ImageListAdapter.ItemClickListener() {
             @Override
             public void OnItemClick(int position, ImageListAdapter.ImageListViewHolder holder) {
@@ -111,7 +126,6 @@ public class MainActivity extends AppCompatActivity implements IView {
                                 }
                                 //执行该函数来触发Remove动画
                                 mImageListAdapter.notifyItemRangeRemoved(finalExtendedItemPosition + 1, finalSubItemCount);
-//                                mImageListAdapter.notifyItemRangeChanged(finalExtendedItemPosition + 1, finalSubItemCount);
                             }
                         }, ANIMATOR_INTERVAL_DEFAULT);
                     }
@@ -136,17 +150,6 @@ public class MainActivity extends AppCompatActivity implements IView {
                 }
             }
         });
-        mRewriteItemAnimator = new RewriteItemAnimator();
-        //设置动画时间保证各动画同步执行
-        mRewriteItemAnimator.setAddDuration(ANIMATOR_INTERVAL_DEFAULT);
-        mRewriteItemAnimator.setMoveDuration(ANIMATOR_INTERVAL_DEFAULT);
-        mRewriteItemAnimator.setChangeDuration(ANIMATOR_INTERVAL_DEFAULT);
-        mRewriteItemAnimator.setRemoveDuration(ANIMATOR_INTERVAL_DEFAULT);
-        //设置屏幕宽度用于Remove位移计算
-        mRewriteItemAnimator.setScreenWidth(this.getWindowManager().getDefaultDisplay().getWidth());
-        mRecyclerView.setLayoutManager(mLayoutManager);
-        mRecyclerView.setAdapter(mImageListAdapter);
-        mRecyclerView.setItemAnimator(mRewriteItemAnimator);
     }
 
     private void initView() {
@@ -157,11 +160,43 @@ public class MainActivity extends AppCompatActivity implements IView {
 
     @Override
     public void showProgressBar() {
-        mProgressBar.setVisibility(View.VISIBLE);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mProgressBar.setVisibility(View.VISIBLE);
+            }
+        });
     }
 
     @Override
     public void hideProgressBar() {
-        mProgressBar.setVisibility(View.GONE);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mProgressBar.setVisibility(View.GONE);
+            }
+        });
+    }
+
+    @Override
+    public void imageLoaded(int position) {
+    }
+
+    //图片缩略图ID加载完毕后进行数据初始化并通知RecyclerView刷新，这是一个异步回调
+    @Override
+    public void imageThumbnailLoaded(final ArrayList<ArrayList<Long>> localImageThumbnailIds) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                //先添加每个文件夹的第一张图片
+                mData = localImageThumbnailIds;
+                for (ArrayList<Long> ids : mData) {
+                    mDataToShow.add(new Long[]{ids.get(0), (long) ImageListAdapter.TYPE_ITEM});
+                    mLoadImagePresenter.loadThumbnailBitmap(ids.get(0), mContext, mImages, 0);
+                    mMarkList.add(0);
+                }
+                mImageListAdapter.notifyItemRangeChanged(0, mDataToShow.size());
+            }
+        });
     }
 }
