@@ -110,9 +110,8 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     @Override
     public void imageLoaded(final int position) {
         //等待RecyclerView停止测量和停止滑动后通知Item进行更新，若不等待停止测量和滑动就通知刷新则会抛异常
-        while (true) {
-            if (mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_IDLE && !mRecyclerView.isComputingLayout())
-                break;
+        while (mRecyclerView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE || mRecyclerView.isComputingLayout()) {
+            Log.e(TAG, "imageLoaded:等待RecyclerView滑动或计算停止中");
         }
         mRecyclerView.post(new Runnable() {
             @Override
