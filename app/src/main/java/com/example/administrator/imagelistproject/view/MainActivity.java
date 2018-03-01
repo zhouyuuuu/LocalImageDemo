@@ -21,11 +21,11 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements IView {
 
-    private boolean mRecyclerViewExecutingAnimation = false;
     private static final int ANIMATOR_INTERVAL_DEFAULT = 200;//默认的动画时间
     RecyclerView mRecyclerView;
     ArrayList<ArrayList<Long>> mData;//所有的图片ID数据
     ArrayList<Long[]> mDataToShow;//用于展示的图片ID
+    private boolean mRecyclerViewExecutingAnimation = false;
     private ArrayList<Integer> mMarkList = new ArrayList<>();//用于记录被展开的Item位置以及展开子项数
     private ImageListAdapter mImageListAdapter;
     private LinearLayoutManager mLayoutManager;
@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity implements IView {
                 //如果RecyclerView正在执行动画，不执行点击事件以防止数据混乱造成的数组越界
                 if (mRecyclerViewExecutingAnimation) return;
                 //以防止越界
-                if (position < 0||position>mDataToShow.size()-1) return;
+                if (position < 0 || position > mDataToShow.size() - 1) return;
                 //点击项为子项时暂不进行操作
                 if (mDataToShow.get(position)[1] == ImageListAdapter.TYPE_SUB_ITEM) return;
                 //将被点击的View及其位置传递给ItemAnimator
@@ -98,7 +98,7 @@ public class MainActivity extends AppCompatActivity implements IView {
                     //执行该函数来触发Add动画
                     mImageListAdapter.notifyItemRangeInserted(position + 1, newData.size());
                     //该操作用于更新RecyclerView的position，因为Add和Remove后RecyclerView中item的position没有自动更新，引起错乱
-                    mImageListAdapter.notifyItemRangeChanged(position + 1, newData.size());
+                    mImageListAdapter.notifyItemRangeChanged(position + newData.size() + 1, mDataToShow.size() - 1 - (position + newData.size()), 0);
                     //被点击项滑动至最左边
                     mLayoutManager.scrollToPositionWithOffset(position, 0);
                     //检查是否有其他的项被展开，有则记录下被展开的子项数目以及该展开项的position
@@ -130,10 +130,11 @@ public class MainActivity extends AppCompatActivity implements IView {
                                 }
                                 //执行该函数来触发Remove动画
                                 mImageListAdapter.notifyItemRangeRemoved(finalExtendedItemPosition + 1, finalSubItemCount);
+                                mImageListAdapter.notifyItemRangeChanged(finalExtendedItemPosition + finalSubItemCount + 1, mDataToShow.size() - finalExtendedItemPosition - 1, 0);
                                 animatorEnd();
                             }
                         }, ANIMATOR_INTERVAL_DEFAULT);
-                    }else {
+                    } else {
                         animatorEnd();
                     }
                 } else {
@@ -151,7 +152,7 @@ public class MainActivity extends AppCompatActivity implements IView {
                     //执行该函数来触发Remove动画
                     mImageListAdapter.notifyItemRangeRemoved(position + 1, size);
                     //该操作用于更新RecyclerView的position，因为Add和Remove后RecyclerView中item的position没有自动更新，引起错乱
-                    mImageListAdapter.notifyItemRangeChanged(position + 1, mDataToShow.size() - position - 1);
+                    mImageListAdapter.notifyItemRangeChanged(position + 1, mDataToShow.size() - position - 1, 0);
                     //被点击项滑动至最左边
                     mLayoutManager.scrollToPositionWithOffset(position, 0);
                     animatorEnd();
@@ -165,17 +166,17 @@ public class MainActivity extends AppCompatActivity implements IView {
         mRecyclerView = findViewById(R.id.rv_image_list);
     }
 
-    private void animatorStart(){
+    private void animatorStart() {
         mRecyclerViewExecutingAnimation = true;
     }
 
-    private void animatorEnd(){
+    private void animatorEnd() {
         mRecyclerView.postDelayed(new Runnable() {
             @Override
             public void run() {
                 mRecyclerViewExecutingAnimation = false;
             }
-        },ANIMATOR_INTERVAL_DEFAULT);
+        }, ANIMATOR_INTERVAL_DEFAULT);
     }
 
 
@@ -201,6 +202,12 @@ public class MainActivity extends AppCompatActivity implements IView {
 
     @Override
     public void imageLoaded(int position) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mImageListAdapter.notifyDataSetChanged();
+            }
+        });
     }
 
     //图片缩略图ID加载完毕后进行数据初始化并通知RecyclerView刷新，这是一个异步回调
@@ -216,7 +223,6 @@ public class MainActivity extends AppCompatActivity implements IView {
                     mLoadImagePresenter.loadThumbnailBitmap(ids.get(0), mContext, mImages, 0);
                     mMarkList.add(0);
                 }
-                mImageListAdapter.notifyItemRangeChanged(0, mDataToShow.size());
             }
         });
     }

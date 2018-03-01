@@ -16,6 +16,7 @@ import com.example.administrator.imagelistproject.model.ImageCache;
 import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -77,6 +78,16 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
                 }
             }
         });
+    }
+
+    /**
+     * 重写了这个方法，如果payloads不为空，就不重新绑定View了避免Change动画执行覆盖掉其他动画
+     */
+    @Override
+    public void onBindViewHolder(ImageListViewHolder holder, int position, List<Object> payloads) {
+        if (payloads.isEmpty()) {
+            onBindViewHolder(holder, position);
+        }
     }
 
     @Override
