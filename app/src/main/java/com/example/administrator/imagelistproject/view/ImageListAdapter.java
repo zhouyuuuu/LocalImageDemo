@@ -66,7 +66,7 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
         if (image != null) {
             holder.iv.setImageBitmap(image);
         } else {
-            holder.iv.setImageBitmap(null);
+            holder.iv.setImageResource(R.drawable.bg_gray_round);
             mLoadImagePresenter.loadThumbnailBitmap(mData.get(position)[0], mContext, mImages, position);
         }
         holder.iv.setOnClickListener(new View.OnClickListener() {

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements IView {
 
+    private boolean mRecyclerViewExecutingAnimation = false;
     private static final int ANIMATOR_INTERVAL_DEFAULT = 200;//默认的动画时间
     RecyclerView mRecyclerView;
     ArrayList<ArrayList<Long>> mData;//所有的图片ID数据
@@ -65,12 +66,17 @@ public class MainActivity extends AppCompatActivity implements IView {
         mImageListAdapter.setItemClickListener(new ImageListAdapter.ItemClickListener() {
             @Override
             public void OnItemClick(int position, ImageListAdapter.ImageListViewHolder holder) {
+                //如果RecyclerView正在执行动画，不执行点击事件以防止数据混乱造成的数组越界
+                if (mRecyclerViewExecutingAnimation) return;
+                //以防止越界
+                if (position < 0||position>mDataToShow.size()-1) return;
                 //点击项为子项时暂不进行操作
                 if (mDataToShow.get(position)[1] == ImageListAdapter.TYPE_SUB_ITEM) return;
                 //将被点击的View及其位置传递给ItemAnimator
                 mRewriteItemAnimator.setClickedView(holder.itemView);
                 //传入View的中点坐标
                 mRewriteItemAnimator.setClickedX((holder.itemView.getLeft() + holder.itemView.getRight()) / 2);
+                animatorStart();
                 //判断该位置在mMarkList中是否有值，如果是0，则该item没有被展开，如果有值，该值为该item的子项数目
                 if (mMarkList.get(position) == 0) {
                     //寻找点击的Item在mData中的位置
@@ -84,9 +90,7 @@ public class MainActivity extends AppCompatActivity implements IView {
                     ArrayList<Long> newData = mData.get(index);
                     for (int i = newData.size() - 1; i >= 0; i--) {
                         mDataToShow.add(position + 1, new Long[]{newData.get(i), (long) ImageListAdapter.TYPE_SUB_ITEM});
-                    }
-                    //将展开信息同步到mMarkList
-                    for (int i = 0; i < newData.size(); i++) {
+                        //将展开信息同步到mMarkList
                         mMarkList.add(position + 1, 0);
                     }
                     //将position标记为被展开
@@ -126,8 +130,11 @@ public class MainActivity extends AppCompatActivity implements IView {
                                 }
                                 //执行该函数来触发Remove动画
                                 mImageListAdapter.notifyItemRangeRemoved(finalExtendedItemPosition + 1, finalSubItemCount);
+                                animatorEnd();
                             }
                         }, ANIMATOR_INTERVAL_DEFAULT);
+                    }else {
+                        animatorEnd();
                     }
                 } else {
                     //设置不存在被展开的其他项
@@ -147,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements IView {
                     mImageListAdapter.notifyItemRangeChanged(position + 1, mDataToShow.size() - position - 1);
                     //被点击项滑动至最左边
                     mLayoutManager.scrollToPositionWithOffset(position, 0);
+                    animatorEnd();
                 }
             }
         });
@@ -155,6 +163,19 @@ public class MainActivity extends AppCompatActivity implements IView {
     private void initView() {
         mProgressBar = findViewById(R.id.pb);
         mRecyclerView = findViewById(R.id.rv_image_list);
+    }
+
+    private void animatorStart(){
+        mRecyclerViewExecutingAnimation = true;
+    }
+
+    private void animatorEnd(){
+        mRecyclerView.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mRecyclerViewExecutingAnimation = false;
+            }
+        },ANIMATOR_INTERVAL_DEFAULT);
     }
 
 
