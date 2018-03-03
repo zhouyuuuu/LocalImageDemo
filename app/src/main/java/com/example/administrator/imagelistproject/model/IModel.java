@@ -9,6 +9,6 @@ import android.content.Context;
 
 public interface IModel {
     void loadLocalImageThumbnailId(Context context);
-
+    void imageListScrollIDEL();
     void loadThumbnailBitmap(long id, Context context, ImageCache images, int position);
 }

@@ -14,6 +14,8 @@ import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
 
 import java.util.ArrayList;
 
+import static android.support.v7.widget.RecyclerView.SCROLL_STATE_IDLE;
+
 
 /**
  * Edited by Administrator on 2018/2/27.
@@ -22,9 +24,9 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity implements IView {
 
     private static final int ANIMATOR_INTERVAL_DEFAULT = 200;//默认的动画时间
-    RecyclerView mRecyclerView;
-    ArrayList<ArrayList<Long>> mData;//所有的图片ID数据
-    ArrayList<Long[]> mDataToShow;//用于展示的图片ID
+    private RecyclerView mRecyclerView;
+    private ArrayList<ArrayList<Long>> mData;//所有的图片ID数据
+    private ArrayList<Long[]> mDataToShow;//用于展示的图片ID
     private boolean mRecyclerViewExecutingAnimation = false;
     private ArrayList<Integer> mMarkList = new ArrayList<>();//用于记录被展开的Item位置以及展开子项数
     private ImageListAdapter mImageListAdapter;
@@ -33,7 +35,6 @@ public class MainActivity extends AppCompatActivity implements IView {
     private ProgressBar mProgressBar;
     private LoadImagePresenter mLoadImagePresenter;
     private ImageCache mImages;
-    private Context mContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,11 +43,11 @@ public class MainActivity extends AppCompatActivity implements IView {
         initView();
         initData();
         //获得所有本地图片ID
-        mLoadImagePresenter.loadLocalImageThumbnailId(this);
+        mLoadImagePresenter.loadLocalImageThumbnailId();
     }
 
     private void initData() {
-        mContext = this;
+        Context context = this;
         mLoadImagePresenter = new LoadImagePresenter(this);
         mDataToShow = new ArrayList<>();
         mImages = new ImageCache();
@@ -58,8 +59,8 @@ public class MainActivity extends AppCompatActivity implements IView {
         mRewriteItemAnimator.setRemoveDuration(ANIMATOR_INTERVAL_DEFAULT);
         //设置屏幕宽度用于Remove位移计算
         mRewriteItemAnimator.setScreenWidth(this.getWindowManager().getDefaultDisplay().getWidth());
-        mImageListAdapter = new ImageListAdapter(mContext, mDataToShow, mImages, mRecyclerView);
-        mLayoutManager = new LinearLayoutManager(mContext, LinearLayoutManager.HORIZONTAL, false);
+        mImageListAdapter = new ImageListAdapter(context, mDataToShow, mImages, mRecyclerView);
+        mLayoutManager = new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false);
         mRecyclerView.setLayoutManager(mLayoutManager);
         mRecyclerView.setAdapter(mImageListAdapter);
         mRecyclerView.setItemAnimator(mRewriteItemAnimator);
@@ -159,6 +160,14 @@ public class MainActivity extends AppCompatActivity implements IView {
                 }
             }
         });
+        mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                if (newState == SCROLL_STATE_IDLE){
+                    mImageListAdapter.notifyImageListScrollIDEL();
+                }
+            }
+        });
     }
 
     private void initView() {
@@ -220,10 +229,15 @@ public class MainActivity extends AppCompatActivity implements IView {
                 mData = localImageThumbnailIds;
                 for (ArrayList<Long> ids : mData) {
                     mDataToShow.add(new Long[]{ids.get(0), (long) ImageListAdapter.TYPE_ITEM});
-                    mLoadImagePresenter.loadThumbnailBitmap(ids.get(0), mContext, mImages, 0);
+                    mLoadImagePresenter.loadThumbnailBitmap(ids.get(0), mImages, 0);
                     mMarkList.add(0);
                 }
             }
         });
+    }
+
+    @Override
+    public boolean isReadyToRefresh() {
+        return mImageListAdapter.isReadyToRefresh();
     }
 }

@@ -11,4 +11,5 @@ public interface IView {
     void hideProgressBar();
     void imageLoaded(int position);
     void imageThumbnailLoaded(ArrayList<ArrayList<Long>> localImageThumbnailIds);
+    boolean isReadyToRefresh();
 }

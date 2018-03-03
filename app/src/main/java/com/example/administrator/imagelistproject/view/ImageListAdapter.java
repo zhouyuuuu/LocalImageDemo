@@ -4,7 +4,6 @@ package com.example.administrator.imagelistproject.view;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,13 +29,11 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     private LayoutInflater mLayoutInflater;
     private ArrayList<Long[]> mData;
     private ItemClickListener mItemClickListener;
-    private Context mContext;
     private LoadImagePresenter mLoadImagePresenter;
     private ImageCache mImages;
     private RecyclerView mRecyclerView;
 
     ImageListAdapter(Context context, ArrayList<Long[]> data, ImageCache images, RecyclerView recyclerView) {
-        mContext = context;
         this.mLayoutInflater = LayoutInflater.from(context);
         this.mData = data;
         mLoadImagePresenter = new LoadImagePresenter(this);
@@ -68,7 +65,7 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
             holder.iv.setImageBitmap(image);
         } else {
             holder.iv.setImageResource(R.drawable.bg_gray_round);
-            mLoadImagePresenter.loadThumbnailBitmap(mData.get(position)[0], mContext, mImages, position);
+            mLoadImagePresenter.loadThumbnailBitmap(mData.get(position)[0], mImages, position);
         }
         holder.iv.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -120,14 +117,9 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
 
     @Override
     public void imageLoaded(final int position) {
-        //等待RecyclerView停止测量和停止滑动后通知Item进行更新，若不等待停止测量和滑动就通知刷新则会抛异常
-        while (mRecyclerView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE || mRecyclerView.isComputingLayout()) {
-            Log.e(TAG, "imageLoaded:等待RecyclerView滑动或计算停止中");
-        }
         mRecyclerView.post(new Runnable() {
             @Override
             public void run() {
-                Log.e(TAG, "run: 调用notifyItemChange" + position);
                 notifyItemChanged(position);
             }
         });
@@ -135,6 +127,11 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
 
     @Override
     public void imageThumbnailLoaded(ArrayList<ArrayList<Long>> localImageThumbnailIds) {
+    }
+
+    @Override
+    public boolean isReadyToRefresh() {
+        return mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_IDLE ;
     }
 
 
@@ -151,5 +148,9 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
             iv = itemView.findViewById(R.id.iv_image);
             tv = itemView.findViewById(R.id.tv_image);
         }
+    }
+
+    void notifyImageListScrollIDEL(){
+        mLoadImagePresenter.notifyImageListScrollIDEL();
     }
 }

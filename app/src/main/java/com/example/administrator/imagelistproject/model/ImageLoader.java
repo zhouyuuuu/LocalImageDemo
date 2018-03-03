@@ -3,7 +3,6 @@ package com.example.administrator.imagelistproject.model;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 
@@ -25,11 +24,13 @@ public class ImageLoader implements IModel {
 
     private LoadImagePresenter mLoadImagePresenter;
     private ThreadPoolExecutor mThreadPoolExecutor;
+    private final ImageLoader mImageLoader;
 
     public ImageLoader(LoadImagePresenter mLoadImagePresenter) {
         this.mLoadImagePresenter = mLoadImagePresenter;
         //使用线程池来管理加载图片和询问数据库的耗时操作
         mThreadPoolExecutor = new ThreadPoolExecutor(6, 10, 10, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
+        mImageLoader = this;
     }
 
     /**
@@ -40,28 +41,9 @@ public class ImageLoader implements IModel {
         mThreadPoolExecutor.execute(new LoadImageThumbnailIdRunnable(1, context));
     }
 
-    /**
-     * 通过图片路径获得该图片对应的系统生成的缩略图id
-     *
-     * @param path    本地图片路径
-     * @param context 上下文
-     * @return 返回图片的缩略图ID
-     */
-    private long getDbId(String path, Context context) {
-        Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-        String selection = MediaStore.MediaColumns.DATA + "=?";
-        String[] selectionArgs = new String[]{path};
-        String[] columns = new String[]{MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DATA};
-        Cursor c = context.getContentResolver().query(uri, columns, selection, selectionArgs, null);
-        if (c == null) {
-            return 0;
-        }
-        long id = 0;
-        if (c.moveToNext()) {
-            id = c.getLong(0);
-        }
-        c.close();
-        return id;
+    @Override
+    public void imageListScrollIDEL() {
+        new Thread(new NotifyImageListScrollIDELRunnable(1,null)).start();
     }
 
     /**
@@ -76,14 +58,11 @@ public class ImageLoader implements IModel {
         }
     }
 
-    /**
-     * 加载图片缩略图ID的Runnable
-     */
-    public class LoadImageThumbnailIdRunnable implements Runnable, Comparable<LoadImageRunnable> {
+    public abstract class BaseRunnable implements Runnable,Comparable<BaseRunnable>{
         private int priority;
         private Context context;
 
-        LoadImageThumbnailIdRunnable(int priority, final Context context) {
+        BaseRunnable(int priority, final Context context) {
             if (priority < 0)
                 throw new IllegalArgumentException();
             this.priority = priority;
@@ -91,38 +70,67 @@ public class ImageLoader implements IModel {
         }
 
         @Override
-        public int compareTo(@NonNull LoadImageRunnable another) {
+        public int compareTo(@NonNull BaseRunnable another) {
             int my = this.getPriority();
             int other = another.getPriority();
             return my < other ? 1 : my > other ? -1 : 0;
         }
 
-        /**
+        int getPriority() {
+            return priority;
+        }
+
+        @Override
+        public void run() {
+            doSth(context);
+        }
+
+        abstract void doSth(Context context);
+    }
+
+    public class NotifyImageListScrollIDELRunnable extends BaseRunnable{
+        NotifyImageListScrollIDELRunnable(int priority, Context context) {
+            super(priority, context);
+        }
+
+        @Override
+        void doSth(Context context) {
+            synchronized (mImageLoader){
+                mImageLoader.notifyAll();
+            }
+        }
+    }
+
+    /**
+     * 加载图片缩略图ID的Runnable
+     */
+    public class LoadImageThumbnailIdRunnable extends BaseRunnable {
+
+        LoadImageThumbnailIdRunnable(int priority, Context context) {
+            super(priority, context);
+        }
+
+        /*
          * 通过Cursor拿到所有图片的路径，每拿到一张图片，对其路径提取出文件名，如果folderNames中存在该文件名，就通过文件名找到对应分组在分组列表中的位置后将图片添加进去，如果不存在则创建一个新分组，
          * folderNames中记录该分组名以及对应于分组列表中的位置，然后添加进分组列表。
          */
         @Override
-        public void run() {
+        void doSth(Context context) {
             ArrayList<ArrayList<Long>> localImageThumbnailIds = new ArrayList<>();
             Cursor cursor = context.getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null, null);
             HashMap<String, Integer> folderNames = new HashMap<>();
             if (cursor != null) {
                 while (cursor.moveToNext()) {
-                    //获取图片的路径
-                    String path = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.DATA));
-                    StringBuilder stringBuilder = new StringBuilder(path);
-                    String[] strings = path.split("/");
-                    String fileName = strings[strings.length - 1];
-                    stringBuilder.delete(path.length() - fileName.length(), path.length());
-                    stringBuilder.trimToSize();
-                    String folderName = stringBuilder.toString();
+                    //获取图片的id和文件夹名称
+                    Long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
+                    String folderName = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME));
                     if (folderNames.containsKey(folderName)) {
                         int index = folderNames.get(folderName);
                         ArrayList<Long> aGroupOfIds = localImageThumbnailIds.get(index);
-                        aGroupOfIds.add(getDbId(path, context));
+                        aGroupOfIds.add(id);
                     } else {
                         ArrayList<Long> aGroupOfIds = new ArrayList<>();
-                        aGroupOfIds.add(getDbId(path, context));
+                        aGroupOfIds.add(id);
                         localImageThumbnailIds.add(aGroupOfIds);
                         folderNames.put(folderName, localImageThumbnailIds.size() - 1);
                     }
@@ -131,54 +139,43 @@ public class ImageLoader implements IModel {
             }
             mLoadImagePresenter.notifyImageThumbnailLoaded(localImageThumbnailIds);
         }
-
-        int getPriority() {
-            return priority;
-        }
     }
 
     /**
      * 加载图片的Runnable
      */
-    public class LoadImageRunnable implements Runnable, Comparable<LoadImageRunnable> {
+    public class LoadImageRunnable extends BaseRunnable {
         private final ImageCache images;
-        private int priority;
         private long id;
-        private Context context;
         private int position;
 
         LoadImageRunnable(int priority, final long id, final Context context, final ImageCache images, final int position) {
+            super(priority,context);
             if (priority < 0)
                 throw new IllegalArgumentException();
-            this.priority = priority;
             this.id = id;
-            this.context = context;
             this.images = images;
             this.position = position;
         }
 
-        @Override
-        public int compareTo(@NonNull LoadImageRunnable another) {
-            int my = this.getPriority();
-            int other = another.getPriority();
-            return my < other ? 1 : my > other ? -1 : 0;
-        }
 
-        /**
-         * 通过图片的缩略图id得到图片的缩略图
-         */
         @Override
-        public void run() {
+        void doSth(Context context) {
             Bitmap image = MediaStore.Images.Thumbnails.getThumbnail(context.getContentResolver(), id, MICRO_KIND,
                     null);
             synchronized (images) {
                 images.putBitmap(id, image);
             }
-            mLoadImagePresenter.notifyImageLoaded(position);
-        }
-
-        int getPriority() {
-            return priority;
+            synchronized (mImageLoader){
+                while (!mLoadImagePresenter.checkViewReadyToRefresh()){
+                    try {
+                        mImageLoader.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                mLoadImagePresenter.notifyImageLoaded(position);
+            }
         }
     }
 
