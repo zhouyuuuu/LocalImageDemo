@@ -1,4 +1,4 @@
-package com.example.administrator.imagelistproject.model;
+package com.example.administrator.imagelistproject.image;
 
 import android.graphics.Bitmap;
 import android.util.LruCache;

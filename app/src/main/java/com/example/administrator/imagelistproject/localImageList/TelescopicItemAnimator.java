@@ -1,4 +1,4 @@
-package com.example.administrator.imagelistproject.view;
+package com.example.administrator.imagelistproject.localImageList;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -9,6 +9,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SimpleItemAnimator;
 import android.view.View;
 import android.view.ViewPropertyAnimator;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,8 +17,9 @@ import java.util.List;
  * Edited by Administrator on 2018/2/27.
  */
 
-public class RewriteItemAnimator extends SimpleItemAnimator {
+public class TelescopicItemAnimator extends SimpleItemAnimator {
 
+    static final String ITEM_TYPE_SUB_ITEM = "new";//这个TAG是用于标记子项的View，在Animator中需要用到该TAG区分项和子项
     private static final boolean DEBUG = false;
     private static TimeInterpolator sDefaultInterpolator;
 
@@ -34,19 +36,24 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
     private ArrayList<RecyclerView.ViewHolder> mMoveAnimations = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mRemoveAnimations = new ArrayList<>();
     private ArrayList<RecyclerView.ViewHolder> mChangeAnimations = new ArrayList<>();
-    //被点击的View及其位置
+    //被点击的View
     private View mClickedView;
+    //被点击的View的水平位置（中心点）
     private int mClickedX;
     //上一次被点击的View
     private View mLastClickedView;
-    //remove向左和向右平移距离
+    //remove向左平移距离
     private int translateLeftX;
+    //remove向右平移距离
     private int translateRightX;
     //是否存在被展开的其他项
     private boolean existExtendedItem = false;
     //屏幕宽度
     private int mScreenWidth;
 
+    /**
+     * 设置是否存在被展开的其他Item
+     */
     void setExistExtendedItem(boolean existExtendedItem) {
         this.existExtendedItem = existExtendedItem;
     }
@@ -149,7 +156,7 @@ public class RewriteItemAnimator extends SimpleItemAnimator {
         final View view = holder.itemView;
         final ViewPropertyAnimator animation = view.animate();
         mRemoveAnimations.add(holder);
-        if (view.getTag() != null && view.getTag().equals(ImageListAdapter.TAG) && mClickedView != null) {
+        if (view.getTag() != null && view.getTag().equals(ITEM_TYPE_SUB_ITEM) && mClickedView != null) {
             //根据是否存在被展开的其他项，如果是则向被点击的View平移，否则向前一个被点击的View平移
             if (!existExtendedItem) {
                 //SubView向点击的View收缩平移

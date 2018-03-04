@@ -1,4 +1,4 @@
-package com.example.administrator.imagelistproject.model;
+package com.example.administrator.imagelistproject.image;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -20,11 +20,11 @@ import static android.provider.MediaStore.Images.Thumbnails.MICRO_KIND;
  * Edited by Administrator on 2018/2/27.
  */
 
-public class ImageLoader implements IModel {
+public class ImageLoader implements IImageLoader {
 
+    private final ImageLoader mImageLoader;
     private LoadImagePresenter mLoadImagePresenter;
     private ThreadPoolExecutor mThreadPoolExecutor;
-    private final ImageLoader mImageLoader;
 
     public ImageLoader(LoadImagePresenter mLoadImagePresenter) {
         this.mLoadImagePresenter = mLoadImagePresenter;
@@ -37,13 +37,14 @@ public class ImageLoader implements IModel {
      * @param context 上下文
      */
     @Override
-    public void loadLocalImageThumbnailId(Context context) {
+    public void loadLocalImageIds(Context context) {
         mThreadPoolExecutor.execute(new LoadImageThumbnailIdRunnable(1, context));
     }
 
     @Override
-    public void imageListScrollIDEL() {
-        new Thread(new NotifyImageListScrollIDELRunnable(1,null)).start();
+    public void ImageListIsReadyToRefreshViewCallback() {
+        //新建一条线程来通知线程池中的所有等待线程可以进行View的更新了
+        new Thread(new NotifyThreadsToRefreshImageListRunnable(1, null)).start();
     }
 
     /**
@@ -51,14 +52,14 @@ public class ImageLoader implements IModel {
      * @param context 上下文
      */
     @Override
-    public void loadThumbnailBitmap(final long id, final Context context, final ImageCache images, final int position) {
+    public void loadImageThumbnail(final long id, final Context context, final ImageCache imageCache) {
         //再确认一次是否Cache中没有该图片
-        if (images.getBitmap(id) == null) {
-            mThreadPoolExecutor.execute(new LoadImageRunnable(1, id, context, images, position));
+        if (imageCache.getBitmap(id) == null) {
+            mThreadPoolExecutor.execute(new LoadImageRunnable(1, id, context, imageCache));
         }
     }
 
-    public abstract class BaseRunnable implements Runnable,Comparable<BaseRunnable>{
+    public abstract class BaseRunnable implements Runnable, Comparable<BaseRunnable> {
         private int priority;
         private Context context;
 
@@ -82,20 +83,20 @@ public class ImageLoader implements IModel {
 
         @Override
         public void run() {
-            doSth(context);
+            methodToRun(context);
         }
 
-        abstract void doSth(Context context);
+        abstract void methodToRun(Context context);
     }
 
-    public class NotifyImageListScrollIDELRunnable extends BaseRunnable{
-        NotifyImageListScrollIDELRunnable(int priority, Context context) {
+    public class NotifyThreadsToRefreshImageListRunnable extends BaseRunnable {
+        NotifyThreadsToRefreshImageListRunnable(int priority, Context context) {
             super(priority, context);
         }
 
         @Override
-        void doSth(Context context) {
-            synchronized (mImageLoader){
+        void methodToRun(Context context) {
+            synchronized (mImageLoader) {
                 mImageLoader.notifyAll();
             }
         }
@@ -115,7 +116,7 @@ public class ImageLoader implements IModel {
          * folderNames中记录该分组名以及对应于分组列表中的位置，然后添加进分组列表。
          */
         @Override
-        void doSth(Context context) {
+        void methodToRun(Context context) {
             ArrayList<ArrayList<Long>> localImageThumbnailIds = new ArrayList<>();
             Cursor cursor = context.getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null, null);
             HashMap<String, Integer> folderNames = new HashMap<>();
@@ -147,34 +148,33 @@ public class ImageLoader implements IModel {
     public class LoadImageRunnable extends BaseRunnable {
         private final ImageCache images;
         private long id;
-        private int position;
 
-        LoadImageRunnable(int priority, final long id, final Context context, final ImageCache images, final int position) {
-            super(priority,context);
+        LoadImageRunnable(int priority, final long id, final Context context, final ImageCache images) {
+            super(priority, context);
             if (priority < 0)
                 throw new IllegalArgumentException();
             this.id = id;
             this.images = images;
-            this.position = position;
         }
 
 
         @Override
-        void doSth(Context context) {
+        void methodToRun(Context context) {
             Bitmap image = MediaStore.Images.Thumbnails.getThumbnail(context.getContentResolver(), id, MICRO_KIND,
                     null);
             synchronized (images) {
                 images.putBitmap(id, image);
             }
-            synchronized (mImageLoader){
-                while (!mLoadImagePresenter.checkViewReadyToRefresh()){
+            synchronized (mImageLoader) {
+                while (!mLoadImagePresenter.checkViewReadyToRefresh()) {
                     try {
+                        //先让线程wait，等到View的状态是可以更新的时候notify
                         mImageLoader.wait();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-                mLoadImagePresenter.notifyImageLoaded(position);
+                mLoadImagePresenter.refreshView(id);
             }
         }
     }

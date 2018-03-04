@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#333333"
-    tools:context="com.example.administrator.imagelistproject.view.MainActivity">
+    tools:context="com.example.administrator.imagelistproject.localImageList.ImageListActivity">
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/rv_image_list"

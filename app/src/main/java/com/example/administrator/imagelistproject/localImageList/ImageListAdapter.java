@@ -1,4 +1,4 @@
-package com.example.administrator.imagelistproject.view;
+package com.example.administrator.imagelistproject.localImageList;
 
 
 import android.content.Context;
@@ -11,46 +11,49 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.administrator.imagelistproject.R;
-import com.example.administrator.imagelistproject.model.ImageCache;
+import com.example.administrator.imagelistproject.image.ImageCache;
 import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
+import com.example.administrator.imagelistproject.util.LogUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
  * Edited by Administrator on 2018/2/27.
  */
 
-public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.ImageListViewHolder> implements IView {
-    static final String TAG = "new";//这个TAG是用于标记子项的View，在Animator中需要用到该TAG区分项和子项
-    static final int TYPE_ITEM = 101;
-    static final int TYPE_SUB_ITEM = 102;//这个是被展开出来的子项
+public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.ImageListViewHolder> implements IImageList {
+    static final int ITEM_TYPE_ITEM = 101;
+    static final int ITEM_TYPE_SUB_ITEM = 102;//这个是被展开出来的子项
     private LayoutInflater mLayoutInflater;
-    private ArrayList<Long[]> mData;
+    private ArrayList<Long[]> mImageIds;
     private ItemClickListener mItemClickListener;
     private LoadImagePresenter mLoadImagePresenter;
-    private ImageCache mImages;
-    private RecyclerView mRecyclerView;
+    private ImageCache mImageCache;
+    private RecyclerView mRvToBind;
+    private ConcurrentHashMap<Long,Integer> mImageIdAndItsPositionInShowingImageList;
 
-    ImageListAdapter(Context context, ArrayList<Long[]> data, ImageCache images, RecyclerView recyclerView) {
+    ImageListAdapter(Context context, ArrayList<Long[]> data, ImageCache images, ConcurrentHashMap<Long,Integer> imageIdAndItsPositionInShowingImageList, RecyclerView recyclerView) {
         this.mLayoutInflater = LayoutInflater.from(context);
-        this.mData = data;
+        this.mImageIds = data;
         mLoadImagePresenter = new LoadImagePresenter(this);
-        mImages = images;
-        mRecyclerView = recyclerView;
+        mImageCache = images;
+        mRvToBind = recyclerView;
+        mImageIdAndItsPositionInShowingImageList = imageIdAndItsPositionInShowingImageList;
     }
 
     @Override
     public ImageListAdapter.ImageListViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v;
         switch (viewType) {
-            case TYPE_ITEM:
+            case ITEM_TYPE_ITEM:
                 v = mLayoutInflater.inflate(R.layout.view_imagelist_item, parent, false);
                 return new ImageListViewHolder(v);
-            case TYPE_SUB_ITEM:
+            case ITEM_TYPE_SUB_ITEM:
                 v = mLayoutInflater.inflate(R.layout.view_imagelist_subitem, parent, false);
-                v.setTag(TAG);
+                v.setTag(TelescopicItemAnimator.ITEM_TYPE_SUB_ITEM);
                 return new ImageListViewHolder(v);
             default:
                 return null;
@@ -60,12 +63,12 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     @Override
     public void onBindViewHolder(final ImageListAdapter.ImageListViewHolder holder, int position) {
         //如果在mImages中不存在该图片，则先将ImageView设置为空，然后开线程去加载图片，待图片加载完成时会回调imageLoaded
-        Bitmap image = mImages.getBitmap(mData.get(position)[0]);
+        Bitmap image = mImageCache.getBitmap(mImageIds.get(position)[0]);
         if (image != null) {
             holder.iv.setImageBitmap(image);
         } else {
             holder.iv.setImageResource(R.drawable.bg_gray_round);
-            mLoadImagePresenter.loadThumbnailBitmap(mData.get(position)[0], mImages, position);
+            mLoadImagePresenter.loadImageThumbnail(mImageIds.get(position)[0], mImageCache);
         }
         holder.iv.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -89,16 +92,16 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
 
     @Override
     public int getItemViewType(int position) {
-        if (mData.get(position)[1] == TYPE_SUB_ITEM) {
-            return TYPE_SUB_ITEM;
+        if (mImageIds.get(position)[1] == ITEM_TYPE_SUB_ITEM) {
+            return ITEM_TYPE_SUB_ITEM;
         } else {
-            return TYPE_ITEM;
+            return ITEM_TYPE_ITEM;
         }
     }
 
     @Override
     public int getItemCount() {
-        return mData == null ? 0 : mData.size();
+        return mImageIds == null ? 0 : mImageIds.size();
     }
 
     void setItemClickListener(ItemClickListener itemClickListener) {
@@ -116,22 +119,26 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     }
 
     @Override
-    public void imageLoaded(final int position) {
-        mRecyclerView.post(new Runnable() {
-            @Override
-            public void run() {
-                notifyItemChanged(position);
-            }
-        });
+    public void imageThumbnailLoadedCallback(long imageId) {
+        final Integer position = mImageIdAndItsPositionInShowingImageList.get(imageId);
+        if (position != null) {
+            mRvToBind.post(new Runnable() {
+                @Override
+                public void run() {
+                    LogUtil.e("~~~", "加载成功，更新了Item" + position);
+                    notifyItemChanged(position);
+                }
+            });
+        }
     }
 
     @Override
-    public void imageThumbnailLoaded(ArrayList<ArrayList<Long>> localImageThumbnailIds) {
+    public void imageIdsLoadedCallback(ArrayList<ArrayList<Long>> localImageThumbnailIds) {
     }
 
     @Override
-    public boolean isReadyToRefresh() {
-        return mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_IDLE ;
+    public boolean isReadyToRefreshView() {
+        return mRvToBind.getScrollState() == RecyclerView.SCROLL_STATE_IDLE ;
     }
 
 
@@ -150,7 +157,7 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
         }
     }
 
-    void notifyImageListScrollIDEL(){
-        mLoadImagePresenter.notifyImageListScrollIDEL();
+    void recyclerViewScrollStateIsIDEL(){
+        mLoadImagePresenter.notifyIsReadyToRefreshView();
     }
 }

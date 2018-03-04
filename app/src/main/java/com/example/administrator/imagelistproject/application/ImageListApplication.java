@@ -1,4 +1,4 @@
-package com.example.administrator.imagelistproject.view;
+package com.example.administrator.imagelistproject.application;
 
 import android.app.Application;
 
@@ -9,13 +9,13 @@ import android.app.Application;
 public class ImageListApplication extends Application {
     private static Application imageListApplication = null;
 
+    public static Application getApplication() {
+        return imageListApplication;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
         imageListApplication = this;
-    }
-
-    public static Application getApplication(){
-        return imageListApplication;
     }
 }

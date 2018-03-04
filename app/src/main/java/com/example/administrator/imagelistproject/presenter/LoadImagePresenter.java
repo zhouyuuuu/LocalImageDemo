@@ -2,11 +2,11 @@ package com.example.administrator.imagelistproject.presenter;
 
 import android.content.Context;
 
-import com.example.administrator.imagelistproject.model.IModel;
-import com.example.administrator.imagelistproject.model.ImageCache;
-import com.example.administrator.imagelistproject.model.ImageLoader;
-import com.example.administrator.imagelistproject.view.IView;
-import com.example.administrator.imagelistproject.view.ImageListApplication;
+import com.example.administrator.imagelistproject.application.ImageListApplication;
+import com.example.administrator.imagelistproject.image.IImageLoader;
+import com.example.administrator.imagelistproject.image.ImageCache;
+import com.example.administrator.imagelistproject.image.ImageLoader;
+import com.example.administrator.imagelistproject.localImageList.IImageList;
 
 import java.util.ArrayList;
 
@@ -16,42 +16,41 @@ import java.util.ArrayList;
  */
 
 public class LoadImagePresenter {
-    private IView iView;
-    private IModel imageLoader;
+    private IImageList iImageList;
+    private IImageLoader imageLoader;
     private Context mContext;
 
-    public LoadImagePresenter(IView iView) {
-        this.iView = iView;
+    public LoadImagePresenter(IImageList iImageList) {
+        this.iImageList = iImageList;
         this.imageLoader = new ImageLoader(this);
         this.mContext = ImageListApplication.getApplication();
     }
 
     /**
-     * 加载图片缩略图ID
+     * 加载图片ID
      */
     public void loadLocalImageThumbnailId() {
-        iView.showProgressBar();
-        imageLoader.loadLocalImageThumbnailId(mContext);
+        iImageList.showProgressBar();
+        imageLoader.loadLocalImageIds(mContext);
     }
 
     /**
      * 加载图片缩略图
      *
-     * @param id       缩略图ID
-     * @param images   图片缓存集合，加载完成的图片会添加到该集合中
-     * @param position 图片对应于RecyclerView中的位置
+     * @param id     图片ID
+     * @param images 图片缓存集合，加载完成的图片会添加到该集合中
      */
-    public void loadThumbnailBitmap(long id, ImageCache images, int position) {
-        imageLoader.loadThumbnailBitmap(id, mContext, images, position);
+    public void loadImageThumbnail(long id, ImageCache images) {
+        imageLoader.loadImageThumbnail(id, mContext, images);
     }
 
     /**
      * 通知View图片已经加载完毕
      *
-     * @param position 图片对应于RecyclerView中的位置
+     * @param imageId 图片id
      */
-    public void notifyImageLoaded(int position) {
-        iView.imageLoaded(position);
+    public void refreshView(long imageId) {
+        iImageList.imageThumbnailLoadedCallback(imageId);
     }
 
     /**
@@ -60,15 +59,22 @@ public class LoadImagePresenter {
      * @param localImageThumbnailIds 加载完成的缩略图ID集合
      */
     public void notifyImageThumbnailLoaded(ArrayList<ArrayList<Long>> localImageThumbnailIds) {
-        iView.imageThumbnailLoaded(localImageThumbnailIds);
-        iView.hideProgressBar();
+        iImageList.imageIdsLoadedCallback(localImageThumbnailIds);
+        iImageList.hideProgressBar();
     }
 
-    public void notifyImageListScrollIDEL(){
-        imageLoader.imageListScrollIDEL();
+    /**
+     * 通知imageLoader可以开始将数据更新到View上
+     */
+    public void notifyIsReadyToRefreshView() {
+        imageLoader.ImageListIsReadyToRefreshViewCallback();
     }
 
-    public boolean checkViewReadyToRefresh(){
-        return iView.isReadyToRefresh();
+    /**
+     * 检查是否View是可以刷新的状态
+     * @return 是否可以刷新
+     */
+    public boolean checkViewReadyToRefresh() {
+        return iImageList.isReadyToRefreshView();
     }
 }
