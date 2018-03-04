@@ -1,6 +1,7 @@
 package com.example.administrator.imagelistproject.image;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
 
 
 /**
@@ -8,9 +9,9 @@ import android.content.Context;
  */
 
 public interface IImageLoader {
-    void loadLocalImageIds(Context context);
+    void loadLocalImageIds(@NonNull Context context);
 
     void ImageListIsReadyToRefreshViewCallback();
 
-    void loadImageThumbnail(long id, Context context, ImageCache images);
+    void loadImageThumbnail(long id, @NonNull Context context, @NonNull ImageCache images);
 }

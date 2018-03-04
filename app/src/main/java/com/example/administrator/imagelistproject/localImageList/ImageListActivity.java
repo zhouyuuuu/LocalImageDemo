@@ -2,6 +2,7 @@ package com.example.administrator.imagelistproject.localImageList;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -99,6 +100,8 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                             index++;
                         }
                     }
+                    //防止越界
+                    if (index<0||index>=mAllImageIds.size()) return;
                     //将点击Item所属mData的项从第一张图片开始导入到mDataToShow中
                     ArrayList<Long> newData = mAllImageIds.get(index);
                     //遍历所有id对应的position，假如position大于所添加位置，则该position会发生变化，变为position+newData.size()
@@ -280,7 +283,7 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
 
     //图片缩略图ID加载完毕后进行数据初始化并通知RecyclerView刷新，这是一个异步回调
     @Override
-    public void imageIdsLoadedCallback(final ArrayList<ArrayList<Long>> ImageIds) {
+    public void imageIdsLoadedCallback(@NonNull final ArrayList<ArrayList<Long>> ImageIds) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {

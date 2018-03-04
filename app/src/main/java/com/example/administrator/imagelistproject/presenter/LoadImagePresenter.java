@@ -1,6 +1,7 @@
 package com.example.administrator.imagelistproject.presenter;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
 
 import com.example.administrator.imagelistproject.application.ImageListApplication;
 import com.example.administrator.imagelistproject.image.IImageLoader;
@@ -20,7 +21,7 @@ public class LoadImagePresenter {
     private IImageLoader imageLoader;
     private Context mContext;
 
-    public LoadImagePresenter(IImageList iImageList) {
+    public LoadImagePresenter(@NonNull IImageList iImageList) {
         this.iImageList = iImageList;
         this.imageLoader = new ImageLoader(this);
         this.mContext = ImageListApplication.getApplication();
@@ -40,7 +41,7 @@ public class LoadImagePresenter {
      * @param id     图片ID
      * @param images 图片缓存集合，加载完成的图片会添加到该集合中
      */
-    public void loadImageThumbnail(long id, ImageCache images) {
+    public void loadImageThumbnail(long id, @NonNull ImageCache images) {
         imageLoader.loadImageThumbnail(id, mContext, images);
     }
 
@@ -58,7 +59,7 @@ public class LoadImagePresenter {
      *
      * @param localImageThumbnailIds 加载完成的缩略图ID集合
      */
-    public void notifyImageThumbnailLoaded(ArrayList<ArrayList<Long>> localImageThumbnailIds) {
+    public void notifyImageThumbnailLoaded(@NonNull ArrayList<ArrayList<Long>> localImageThumbnailIds) {
         iImageList.imageIdsLoadedCallback(localImageThumbnailIds);
         iImageList.hideProgressBar();
     }

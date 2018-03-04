@@ -26,7 +26,7 @@ public class ImageLoader implements IImageLoader {
     private LoadImagePresenter mLoadImagePresenter;
     private ThreadPoolExecutor mThreadPoolExecutor;
 
-    public ImageLoader(LoadImagePresenter mLoadImagePresenter) {
+    public ImageLoader(@NonNull LoadImagePresenter mLoadImagePresenter) {
         this.mLoadImagePresenter = mLoadImagePresenter;
         //使用线程池来管理加载图片和询问数据库的耗时操作
         mThreadPoolExecutor = new ThreadPoolExecutor(6, 10, 10, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
@@ -37,7 +37,7 @@ public class ImageLoader implements IImageLoader {
      * @param context 上下文
      */
     @Override
-    public void loadLocalImageIds(Context context) {
+    public void loadLocalImageIds(@NonNull Context context) {
         mThreadPoolExecutor.execute(new LoadImageThumbnailIdRunnable(1, context));
     }
 
@@ -52,7 +52,7 @@ public class ImageLoader implements IImageLoader {
      * @param context 上下文
      */
     @Override
-    public void loadImageThumbnail(final long id, final Context context, final ImageCache imageCache) {
+    public void loadImageThumbnail(final long id, @NonNull final Context context, @NonNull final ImageCache imageCache) {
         //再确认一次是否Cache中没有该图片
         if (imageCache.getBitmap(id) == null) {
             mThreadPoolExecutor.execute(new LoadImageRunnable(1, id, context, imageCache));

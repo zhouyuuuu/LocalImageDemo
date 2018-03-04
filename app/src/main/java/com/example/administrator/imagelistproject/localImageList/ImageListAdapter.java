@@ -3,6 +3,7 @@ package com.example.administrator.imagelistproject.localImageList;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -133,7 +134,7 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     }
 
     @Override
-    public void imageIdsLoadedCallback(ArrayList<ArrayList<Long>> localImageThumbnailIds) {
+    public void imageIdsLoadedCallback(@NonNull ArrayList<ArrayList<Long>> localImageThumbnailIds) {
     }
 
     @Override

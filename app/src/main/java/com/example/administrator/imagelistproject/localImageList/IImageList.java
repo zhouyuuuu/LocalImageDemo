@@ -1,5 +1,7 @@
 package com.example.administrator.imagelistproject.localImageList;
 
+import android.support.annotation.NonNull;
+
 import java.util.ArrayList;
 
 /**
@@ -13,7 +15,7 @@ public interface IImageList {
 
     void imageThumbnailLoadedCallback(long imageId);
 
-    void imageIdsLoadedCallback(ArrayList<ArrayList<Long>> localImageThumbnailIds);
+    void imageIdsLoadedCallback(@NonNull ArrayList<ArrayList<Long>> localImageThumbnailIds);
 
     boolean isReadyToRefreshView();
 }
