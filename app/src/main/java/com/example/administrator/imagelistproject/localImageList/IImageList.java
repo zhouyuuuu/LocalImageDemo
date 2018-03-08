@@ -2,6 +2,8 @@ package com.example.administrator.imagelistproject.localImageList;
 
 import android.support.annotation.NonNull;
 
+import com.example.administrator.imagelistproject.image.ImageBean;
+
 import java.util.ArrayList;
 
 /**
@@ -13,9 +15,9 @@ public interface IImageList {
 
     void hideProgressBar();
 
-    void imageThumbnailLoadedCallback(long imageId);
+    void imageThumbnailLoadedCallback(ImageBean imageBean);
 
-    void imageIdsLoadedCallback(@NonNull ArrayList<ArrayList<Long>> localImageThumbnailIds);
+    void imageBeansLoadedCallback(@NonNull ArrayList<ArrayList<ImageBean>> localImageThumbnailIds);
 
     boolean isReadyToRefreshView();
 }

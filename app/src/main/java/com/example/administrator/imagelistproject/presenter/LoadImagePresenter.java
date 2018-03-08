@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 
 import com.example.administrator.imagelistproject.application.ImageListApplication;
 import com.example.administrator.imagelistproject.image.IImageLoader;
+import com.example.administrator.imagelistproject.image.ImageBean;
 import com.example.administrator.imagelistproject.image.ImageCache;
 import com.example.administrator.imagelistproject.image.ImageLoader;
 import com.example.administrator.imagelistproject.localImageList.IImageList;
@@ -32,26 +33,26 @@ public class LoadImagePresenter {
      */
     public void loadLocalImageThumbnailId() {
         iImageList.showProgressBar();
-        imageLoader.loadLocalImageIds(mContext);
+        imageLoader.loadLocalImageBeans(mContext);
     }
 
     /**
      * 加载图片缩略图
      *
-     * @param id     图片ID
+     * @param imageBean 图片信息
      * @param images 图片缓存集合，加载完成的图片会添加到该集合中
      */
-    public void loadImageThumbnail(long id, @NonNull ImageCache images) {
-        imageLoader.loadImageThumbnail(id, mContext, images);
+    public void loadImageThumbnail(ImageBean imageBean, @NonNull ImageCache images) {
+        imageLoader.loadImageThumbnail(imageBean, mContext, images);
     }
 
     /**
      * 通知View图片已经加载完毕
      *
-     * @param imageId 图片id
+     * @param imageBean 图片
      */
-    public void refreshView(long imageId) {
-        iImageList.imageThumbnailLoadedCallback(imageId);
+    public void refreshView(ImageBean imageBean) {
+        iImageList.imageThumbnailLoadedCallback(imageBean);
     }
 
     /**
@@ -59,8 +60,8 @@ public class LoadImagePresenter {
      *
      * @param localImageThumbnailIds 加载完成的缩略图ID集合
      */
-    public void notifyImageThumbnailLoaded(@NonNull ArrayList<ArrayList<Long>> localImageThumbnailIds) {
-        iImageList.imageIdsLoadedCallback(localImageThumbnailIds);
+    public void notifyImageThumbnailLoaded(@NonNull ArrayList<ArrayList<ImageBean>> localImageThumbnailIds) {
+        iImageList.imageBeansLoadedCallback(localImageThumbnailIds);
         iImageList.hideProgressBar();
     }
 

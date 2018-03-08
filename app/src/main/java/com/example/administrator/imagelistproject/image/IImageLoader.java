@@ -9,9 +9,9 @@ import android.support.annotation.NonNull;
  */
 
 public interface IImageLoader {
-    void loadLocalImageIds(@NonNull Context context);
+    void loadLocalImageBeans(@NonNull Context context);
 
     void ImageListIsReadyToRefreshViewCallback();
 
-    void loadImageThumbnail(long id, @NonNull Context context, @NonNull ImageCache images);
+    void loadImageThumbnail(ImageBean imageBean, @NonNull Context context, @NonNull ImageCache images);
 }

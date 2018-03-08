@@ -1,6 +1,5 @@
 package com.example.administrator.imagelistproject.localImageList;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -10,6 +9,8 @@ import android.view.View;
 import android.widget.ProgressBar;
 
 import com.example.administrator.imagelistproject.R;
+import com.example.administrator.imagelistproject.application.ImageListApplication;
+import com.example.administrator.imagelistproject.image.ImageBean;
 import com.example.administrator.imagelistproject.image.ImageCache;
 import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
 import com.example.administrator.imagelistproject.util.LogUtil;
@@ -29,22 +30,21 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
 
     private static final int ANIMATOR_INTERVAL_DEFAULT = 200;//默认的动画时间
     private RecyclerView mRvImageList;
-    private ArrayList<ArrayList<Long>> mAllImageIds;//所有的图片ID数据
-    private ArrayList<Long[]> mIdAndTypeOfShowingImages;//用于展示的图片ID
+    private ArrayList<ArrayList<ImageBean>> mAllImageIds;//所有的图片ID数据
+    private ArrayList<ImageBean> mShowingImageBeans;//用于展示的图片ID
     private boolean mRecyclerViewExecutingAnimation = false;//recyclerView是否正在执行动画
     private ArrayList<Integer> mMarkItemTypeList = new ArrayList<>();//用于记录被展开的Item位置以及展开子项数
     private ImageListAdapter mImageListAdapter;
     private LinearLayoutManager mLayoutManager;
-    private TelescopicItemAnimator mTelescopicItemAnimator;//重新写的ItemAnimator
-    private ProgressBar mPbLoadingImageIds;
+    private TelescopicItemAnimator mTelescopicItemAnimator;//伸缩变换ItemAnimator
+    private ProgressBar mPbLoadingImageBeans;
     private LoadImagePresenter mLoadImagePresenter;
-    private ImageCache mImageCache;
     private int mLastExtendIndexInAllImageIds;
     /*
      *图片Id为键，对应于mShowingImageIdAndType中的position为值，用于加载图片完成后快速找到该图片ID对应的position来刷新mRecyclerView
      *因为会有多个线程操作该集合，所以用ConcurrentHashMap保证线程安全
      */
-    private ConcurrentHashMap<Long, Integer> mImageIdAndItsPositionInShowingImageList;
+    private ConcurrentHashMap<ImageBean, Integer> mImageIdAndItsPositionInShowingImageList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,15 +52,14 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
         setContentView(R.layout.activity_main);
         initView();
         initData();
-        //获得所有本地图片ID
+        //获得所有本地图片信息
         mLoadImagePresenter.loadLocalImageThumbnailId();
     }
 
     private void initData() {
-        Context context = this;
         mLoadImagePresenter = new LoadImagePresenter(this);
-        mIdAndTypeOfShowingImages = new ArrayList<>();
-        mImageCache = new ImageCache();
+        mShowingImageBeans = new ArrayList<>();
+        ImageCache mImageCache = new ImageCache();
         mImageIdAndItsPositionInShowingImageList = new ConcurrentHashMap<>();
         mTelescopicItemAnimator = new TelescopicItemAnimator();
         //设置动画时间保证各动画同步执行
@@ -70,8 +69,8 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
         mTelescopicItemAnimator.setRemoveDuration(ANIMATOR_INTERVAL_DEFAULT);
         //设置屏幕宽度用于Remove位移计算
         mTelescopicItemAnimator.setScreenWidth(this.getWindowManager().getDefaultDisplay().getWidth());
-        mImageListAdapter = new ImageListAdapter(context, mIdAndTypeOfShowingImages, mImageCache, mImageIdAndItsPositionInShowingImageList, mRvImageList);
-        mLayoutManager = new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false);
+        mImageListAdapter = new ImageListAdapter(this, mShowingImageBeans, mImageCache, mImageIdAndItsPositionInShowingImageList, mRvImageList);
+        mLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
         mRvImageList.setLayoutManager(mLayoutManager);
         mRvImageList.setAdapter(mImageListAdapter);
         mRvImageList.setItemAnimator(mTelescopicItemAnimator);
@@ -81,9 +80,9 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                 //如果RecyclerView正在执行动画，不执行点击事件以防止数据混乱造成的数组越界
                 if (mRecyclerViewExecutingAnimation) return;
                 //以防止越界
-                if (position < 0 || position > mIdAndTypeOfShowingImages.size() - 1) return;
+                if (position < 0 || position > mShowingImageBeans.size() - 1) return;
                 //点击项为子项时暂不进行操作
-                if (mIdAndTypeOfShowingImages.get(position)[1] == ImageListAdapter.ITEM_TYPE_SUB_ITEM)
+                if (mShowingImageBeans.get(position).getItemType() == ImageListAdapter.ITEM_TYPE_SUB_ITEM)
                     return;
                 //将被点击的View及其位置传递给ItemAnimator
                 mTelescopicItemAnimator.setClickedView(holder.itemView);
@@ -96,32 +95,33 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                     //寻找点击的Item在mData中的位置
                     int index = -1;
                     for (int i = 0; i <= position; i++) {
-                        if (mIdAndTypeOfShowingImages.get(i)[1] == ImageListAdapter.ITEM_TYPE_ITEM) {
+                        if (mShowingImageBeans.get(i).getItemType() == ImageListAdapter.ITEM_TYPE_ITEM) {
                             index++;
                         }
                     }
                     //防止越界
                     if (index<0||index>=mAllImageIds.size()) return;
-                    //将点击Item所属mData的项从第一张图片开始导入到mDataToShow中
-                    ArrayList<Long> newData = mAllImageIds.get(index);
+                    //将点击Item所属mData的项从第二张图片开始导入到mDataToShow中
+                    ArrayList<ImageBean> newData = mAllImageIds.get(index);
                     //遍历所有id对应的position，假如position大于所添加位置，则该position会发生变化，变为position+newData.size()
-                    for (Map.Entry<Long, Integer> entry : mImageIdAndItsPositionInShowingImageList.entrySet()) {
+                    for (Map.Entry<ImageBean, Integer> entry : mImageIdAndItsPositionInShowingImageList.entrySet()) {
                         int entryPosition = entry.getValue();
                         if (entryPosition > position)
-                            entry.setValue(entryPosition + newData.size());
+                            entry.setValue(entryPosition + newData.size()-1);
                     }
-                    for (int i = newData.size() - 1; i >= 0; i--) {
-                        mIdAndTypeOfShowingImages.add(position + 1, new Long[]{newData.get(i), (long) ImageListAdapter.ITEM_TYPE_SUB_ITEM});
+                    for (int i = newData.size() - 1; i > 0; i--) {
+                        ImageBean newImageBean = newData.get(i);
+                        mShowingImageBeans.add(position + 1, newImageBean);
                         //将展开信息同步到mMarkList
                         mMarkItemTypeList.add(position + 1, 0);
-                        mImageIdAndItsPositionInShowingImageList.put(newData.get(i), position + 1 + i);
+                        mImageIdAndItsPositionInShowingImageList.put(newImageBean, position + i);
                     }
                     //将position标记为被展开
-                    mMarkItemTypeList.set(position, newData.size());
+                    mMarkItemTypeList.set(position, newData.size()-1);
                     //执行该函数来触发Add动画
-                    mImageListAdapter.notifyItemRangeInserted(position + 1, newData.size());
+                    mImageListAdapter.notifyItemRangeInserted(position + 1, newData.size()-1);
                     //该操作用于更新RecyclerView的position，因为Add和Remove后RecyclerView中item的position没有自动更新，引起错乱
-                    mImageListAdapter.notifyItemRangeChanged(position + newData.size() + 1, mIdAndTypeOfShowingImages.size() - 1 - (position + newData.size()), 0);
+                    mImageListAdapter.notifyItemRangeChanged(position + newData.size() , mShowingImageBeans.size() - 1 - (position + newData.size()-1), 0);
                     //被点击项滑动至最左边
                     mLayoutManager.scrollToPositionWithOffset(position, 0);
                     //检查是否有其他的项被展开，有则记录下被展开的子项数目以及该展开项的position
@@ -148,27 +148,21 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                                 mMarkItemTypeList.set(finalExtendedItemPosition, 0);
                                 for (int i = 0; i < finalSubItemCount; i++) {
                                     //删除数据
-                                    mIdAndTypeOfShowingImages.remove(finalExtendedItemPosition + 1);
+                                    mShowingImageBeans.remove(finalExtendedItemPosition + 1);
                                     //列表同步
                                     mMarkItemTypeList.remove(finalExtendedItemPosition + 1);
-                                    //这边不删除i=0的图片，因为这张图片是封面
-                                    if (i!=0){
-                                        mImageIdAndItsPositionInShowingImageList.remove(mAllImageIds.get(mLastExtendIndexInAllImageIds).get(i));
-                                    }else {
-                                        //在添加时封面图片id对应的位置会被更新为子项的位置，子项删除后将其重新设回封面位置，即子项位置-1
-                                        int position = mImageIdAndItsPositionInShowingImageList.get(mAllImageIds.get(mLastExtendIndexInAllImageIds).get(i));
-                                        mImageIdAndItsPositionInShowingImageList.put(mAllImageIds.get(mLastExtendIndexInAllImageIds).get(i),position-1);
-                                    }
+                                    mImageIdAndItsPositionInShowingImageList.remove(mAllImageIds.get(mLastExtendIndexInAllImageIds).get(i+1));
+
                                 }
                                 //遍历所有id对应的position，假如position大于所添加位置，则该position会发生变化，变为position-newData.size()
-                                for (Map.Entry<Long, Integer> entry : mImageIdAndItsPositionInShowingImageList.entrySet()) {
+                                for (Map.Entry<ImageBean, Integer> entry : mImageIdAndItsPositionInShowingImageList.entrySet()) {
                                     int entryPosition = entry.getValue();
                                     if (entryPosition > finalExtendedItemPosition)
                                         entry.setValue(entryPosition - finalSubItemCount);
                                 }
                                 //执行该函数来触发Remove动画
                                 mImageListAdapter.notifyItemRangeRemoved(finalExtendedItemPosition + 1, finalSubItemCount);
-                                mImageListAdapter.notifyItemRangeChanged(finalExtendedItemPosition + finalSubItemCount + 1, mIdAndTypeOfShowingImages.size() - finalExtendedItemPosition - 1, 0);
+                                mImageListAdapter.notifyItemRangeChanged(finalExtendedItemPosition + finalSubItemCount + 1, mShowingImageBeans.size() - finalExtendedItemPosition - 1, 0);
                                 //动画结束
                                 animatorEnd();
                                 //更新上一次被展开的list在mAllImageIds中的index
@@ -191,18 +185,12 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                     mMarkItemTypeList.set(position, 0);
                     //删除子项，并同步到mMarkList
                     for (int i = position + size; i > position; i--) {
-                        mIdAndTypeOfShowingImages.remove(i);
+                        mShowingImageBeans.remove(i);
                         mMarkItemTypeList.remove(i);
-                        if (i!=position+1){
-                            mImageIdAndItsPositionInShowingImageList.remove(mAllImageIds.get(mLastExtendIndexInAllImageIds).get(i - 1 - position));
-                        }else {
-                            //在添加时封面图片id对应的位置会被更新为子项的位置，子项删除后将其重新设回封面位置，即子项位置-1
-                            int index = mImageIdAndItsPositionInShowingImageList.get(mAllImageIds.get(mLastExtendIndexInAllImageIds).get(i - 1 - position));
-                            mImageIdAndItsPositionInShowingImageList.put(mAllImageIds.get(mLastExtendIndexInAllImageIds).get(i - 1 - position),index-1);
-                        }
+                        mImageIdAndItsPositionInShowingImageList.remove(mAllImageIds.get(mLastExtendIndexInAllImageIds).get(i - position));
                     }
                     //遍历所有id对应的position，假如position大于所添加位置，则该position会发生变化，变为position-newData.size()
-                    for (Map.Entry<Long, Integer> entry : mImageIdAndItsPositionInShowingImageList.entrySet()) {
+                    for (Map.Entry<ImageBean, Integer> entry : mImageIdAndItsPositionInShowingImageList.entrySet()) {
                         int entryPosition = entry.getValue();
                         if (entryPosition > position)
                             entry.setValue(entryPosition - size);
@@ -210,7 +198,7 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                     //执行该函数来触发Remove动画
                     mImageListAdapter.notifyItemRangeRemoved(position + 1, size);
                     //该操作用于更新RecyclerView的position，因为Add和Remove后RecyclerView中item的position没有自动更新，引起错乱
-                    mImageListAdapter.notifyItemRangeChanged(position + 1, mIdAndTypeOfShowingImages.size() - position - 1, 0);
+                    mImageListAdapter.notifyItemRangeChanged(position + 1, mShowingImageBeans.size() - position - 1, 0);
                     //被点击项滑动至最左边
                     mLayoutManager.scrollToPositionWithOffset(position, 0);
                     //动画结束
@@ -229,7 +217,7 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
     }
 
     private void initView() {
-        mPbLoadingImageIds = findViewById(R.id.pb);
+        mPbLoadingImageBeans = findViewById(R.id.pb);
         mRvImageList = findViewById(R.id.rv_image_list);
     }
 
@@ -252,7 +240,7 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mPbLoadingImageIds.setVisibility(View.VISIBLE);
+                mPbLoadingImageBeans.setVisibility(View.VISIBLE);
             }
         });
     }
@@ -262,14 +250,14 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mPbLoadingImageIds.setVisibility(View.GONE);
+                mPbLoadingImageBeans.setVisibility(View.GONE);
             }
         });
     }
 
     @Override
-    public void imageThumbnailLoadedCallback(long imageId) {
-        final Integer position = mImageIdAndItsPositionInShowingImageList.get(imageId);
+    public void imageThumbnailLoadedCallback(ImageBean imageBean) {
+        final Integer position = mImageIdAndItsPositionInShowingImageList.get(imageBean);
         if (position != null) {
             mRvImageList.post(new Runnable() {
                 @Override
@@ -283,18 +271,19 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
 
     //图片缩略图ID加载完毕后进行数据初始化并通知RecyclerView刷新，这是一个异步回调
     @Override
-    public void imageIdsLoadedCallback(@NonNull final ArrayList<ArrayList<Long>> ImageIds) {
+    public void imageBeansLoadedCallback(@NonNull final ArrayList<ArrayList<ImageBean>> ImageBeans) {
+        //先添加每个文件夹的第一张图片
+        mAllImageIds = ImageBeans;
+        for (ArrayList<ImageBean> aGroupOfBean : mAllImageIds) {
+            ImageBean imageBean = aGroupOfBean.get(0);
+            mShowingImageBeans.add(imageBean);
+            mImageIdAndItsPositionInShowingImageList.put(imageBean, mShowingImageBeans.size() - 1);
+            mMarkItemTypeList.add(0);
+        }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                //先添加每个文件夹的第一张图片
-                mAllImageIds = ImageIds;
-                for (ArrayList<Long> aGroupOfId : mAllImageIds) {
-                    mIdAndTypeOfShowingImages.add(new Long[]{aGroupOfId.get(0), (long) ImageListAdapter.ITEM_TYPE_ITEM});
-                    mLoadImagePresenter.loadImageThumbnail(aGroupOfId.get(0), mImageCache);
-                    mImageIdAndItsPositionInShowingImageList.put(aGroupOfId.get(0), mIdAndTypeOfShowingImages.size() - 1);
-                    mMarkItemTypeList.add(0);
-                }
+                mImageListAdapter.notifyDataSetChanged();
             }
         });
     }
@@ -302,5 +291,11 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
     @Override
     public boolean isReadyToRefreshView() {
         return mRvImageList.getScrollState() == SCROLL_STATE_IDLE;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        ImageListApplication.getRefWatcher().watch(this);
     }
 }

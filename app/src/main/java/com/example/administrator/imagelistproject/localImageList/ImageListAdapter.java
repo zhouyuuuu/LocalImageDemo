@@ -12,6 +12,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.administrator.imagelistproject.R;
+import com.example.administrator.imagelistproject.image.ImageBean;
 import com.example.administrator.imagelistproject.image.ImageCache;
 import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
 import com.example.administrator.imagelistproject.util.LogUtil;
@@ -26,19 +27,19 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 
 public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.ImageListViewHolder> implements IImageList {
-    static final int ITEM_TYPE_ITEM = 101;
-    static final int ITEM_TYPE_SUB_ITEM = 102;//这个是被展开出来的子项
+    public static final int ITEM_TYPE_ITEM = 101;
+    public static final int ITEM_TYPE_SUB_ITEM = 102;//这个是被展开出来的子项
     private LayoutInflater mLayoutInflater;
-    private ArrayList<Long[]> mImageIds;
+    private final ArrayList<ImageBean> mImageBeans;
     private ItemClickListener mItemClickListener;
     private LoadImagePresenter mLoadImagePresenter;
     private ImageCache mImageCache;
     private RecyclerView mRvToBind;
-    private ConcurrentHashMap<Long,Integer> mImageIdAndItsPositionInShowingImageList;
+    private ConcurrentHashMap<ImageBean,Integer> mImageIdAndItsPositionInShowingImageList;
 
-    ImageListAdapter(Context context, ArrayList<Long[]> data, ImageCache images, ConcurrentHashMap<Long,Integer> imageIdAndItsPositionInShowingImageList, RecyclerView recyclerView) {
+    ImageListAdapter(Context context, ArrayList<ImageBean> data, ImageCache images, ConcurrentHashMap<ImageBean,Integer> imageIdAndItsPositionInShowingImageList, RecyclerView recyclerView) {
         this.mLayoutInflater = LayoutInflater.from(context);
-        this.mImageIds = data;
+        this.mImageBeans = data;
         mLoadImagePresenter = new LoadImagePresenter(this);
         mImageCache = images;
         mRvToBind = recyclerView;
@@ -64,12 +65,12 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     @Override
     public void onBindViewHolder(final ImageListAdapter.ImageListViewHolder holder, int position) {
         //如果在mImages中不存在该图片，则先将ImageView设置为空，然后开线程去加载图片，待图片加载完成时会回调imageLoaded
-        Bitmap image = mImageCache.getBitmap(mImageIds.get(position)[0]);
+        Bitmap image = mImageCache.getBitmap(mImageBeans.get(position));
         if (image != null) {
             holder.iv.setImageBitmap(image);
         } else {
             holder.iv.setImageResource(R.drawable.bg_gray_round);
-            mLoadImagePresenter.loadImageThumbnail(mImageIds.get(position)[0], mImageCache);
+            mLoadImagePresenter.loadImageThumbnail(mImageBeans.get(position), mImageCache);
         }
         holder.iv.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -93,7 +94,7 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
 
     @Override
     public int getItemViewType(int position) {
-        if (mImageIds.get(position)[1] == ITEM_TYPE_SUB_ITEM) {
+        if (mImageBeans.get(position).getItemType() == ITEM_TYPE_SUB_ITEM) {
             return ITEM_TYPE_SUB_ITEM;
         } else {
             return ITEM_TYPE_ITEM;
@@ -102,7 +103,7 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
 
     @Override
     public int getItemCount() {
-        return mImageIds == null ? 0 : mImageIds.size();
+        return mImageBeans == null ? 0 : mImageBeans.size();
     }
 
     void setItemClickListener(ItemClickListener itemClickListener) {
@@ -120,8 +121,8 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     }
 
     @Override
-    public void imageThumbnailLoadedCallback(long imageId) {
-        final Integer position = mImageIdAndItsPositionInShowingImageList.get(imageId);
+    public void imageThumbnailLoadedCallback(ImageBean imageBean) {
+        final Integer position = mImageIdAndItsPositionInShowingImageList.get(imageBean);
         if (position != null) {
             mRvToBind.post(new Runnable() {
                 @Override
@@ -134,14 +135,13 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     }
 
     @Override
-    public void imageIdsLoadedCallback(@NonNull ArrayList<ArrayList<Long>> localImageThumbnailIds) {
+    public void imageBeansLoadedCallback(@NonNull ArrayList<ArrayList<ImageBean>> localImageThumbnailIds) {
     }
 
     @Override
     public boolean isReadyToRefreshView() {
         return mRvToBind.getScrollState() == RecyclerView.SCROLL_STATE_IDLE ;
     }
-
 
     public interface ItemClickListener {
         void OnItemClick(int position, ImageListViewHolder holder);

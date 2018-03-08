@@ -3,17 +3,19 @@ package com.example.administrator.imagelistproject.image;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
-
+import com.example.administrator.imagelistproject.R;
+import com.example.administrator.imagelistproject.application.ImageListApplication;
+import com.example.administrator.imagelistproject.localImageList.ImageListAdapter;
 import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
-
+import com.example.administrator.imagelistproject.util.BitmapUtil;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import static android.provider.MediaStore.Images.Thumbnails.MICRO_KIND;
 
 /**
@@ -25,6 +27,7 @@ public class ImageLoader implements IImageLoader {
     private final ImageLoader mImageLoader;
     private LoadImagePresenter mLoadImagePresenter;
     private ThreadPoolExecutor mThreadPoolExecutor;
+    private Bitmap mDefaultBitmap;
 
     public ImageLoader(@NonNull LoadImagePresenter mLoadImagePresenter) {
         this.mLoadImagePresenter = mLoadImagePresenter;
@@ -33,12 +36,16 @@ public class ImageLoader implements IImageLoader {
         mImageLoader = this;
     }
 
+    private void loadDefaultBitmap() {
+        mDefaultBitmap = BitmapFactory.decodeResource(ImageListApplication.getApplication().getResources(), R.mipmap.error);
+    }
+
     /**
      * @param context 上下文
      */
     @Override
-    public void loadLocalImageIds(@NonNull Context context) {
-        mThreadPoolExecutor.execute(new LoadImageThumbnailIdRunnable(1, context));
+    public void loadLocalImageBeans(@NonNull Context context) {
+        mThreadPoolExecutor.execute(new LoadImageBeansRunnable(1, context));
     }
 
     @Override
@@ -48,14 +55,14 @@ public class ImageLoader implements IImageLoader {
     }
 
     /**
-     * @param id      图片缩略图ID
-     * @param context 上下文
+     * @param imageBean 图片信息
+     * @param context   上下文
      */
     @Override
-    public void loadImageThumbnail(final long id, @NonNull final Context context, @NonNull final ImageCache imageCache) {
+    public void loadImageThumbnail(final ImageBean imageBean, @NonNull final Context context, @NonNull final ImageCache imageCache) {
         //再确认一次是否Cache中没有该图片
-        if (imageCache.getBitmap(id) == null) {
-            mThreadPoolExecutor.execute(new LoadImageRunnable(1, id, context, imageCache));
+        if (imageCache.getBitmap(imageBean) == null) {
+            mThreadPoolExecutor.execute(new LoadImageRunnable(1, imageBean, context, imageCache));
         }
     }
 
@@ -103,11 +110,11 @@ public class ImageLoader implements IImageLoader {
     }
 
     /**
-     * 加载图片缩略图ID的Runnable
+     * 加载图片缩略图信息的Runnable
      */
-    public class LoadImageThumbnailIdRunnable extends BaseRunnable {
+    public class LoadImageBeansRunnable extends BaseRunnable {
 
-        LoadImageThumbnailIdRunnable(int priority, Context context) {
+        LoadImageBeansRunnable(int priority, Context context) {
             super(priority, context);
         }
 
@@ -117,22 +124,33 @@ public class ImageLoader implements IImageLoader {
          */
         @Override
         void methodToRun(Context context) {
-            ArrayList<ArrayList<Long>> localImageThumbnailIds = new ArrayList<>();
+            ArrayList<ArrayList<ImageBean>> localImageThumbnailIds = new ArrayList<>();
             Cursor cursor = context.getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null, null);
             HashMap<String, Integer> folderNames = new HashMap<>();
             if (cursor != null) {
                 while (cursor.moveToNext()) {
                     //获取图片的id和文件夹名称
+                    ImageBean imageBean = new ImageBean();
                     Long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
+                    String uri = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.DATA));
+                    imageBean.setId(id);
+                    imageBean.setUri(uri);
                     String folderName = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME));
                     if (folderNames.containsKey(folderName)) {
+                        imageBean.setItemType(ImageListAdapter.ITEM_TYPE_SUB_ITEM);
                         int index = folderNames.get(folderName);
-                        ArrayList<Long> aGroupOfIds = localImageThumbnailIds.get(index);
-                        aGroupOfIds.add(id);
+                        ArrayList<ImageBean> aGroupOfBeans = localImageThumbnailIds.get(index);
+                        aGroupOfBeans.add(imageBean);
                     } else {
-                        ArrayList<Long> aGroupOfIds = new ArrayList<>();
-                        aGroupOfIds.add(id);
-                        localImageThumbnailIds.add(aGroupOfIds);
+                        ArrayList<ImageBean> aGroupOfBeans = new ArrayList<>();
+                        imageBean.setItemType(ImageListAdapter.ITEM_TYPE_ITEM);
+                        aGroupOfBeans.add(imageBean);
+                        ImageBean copy = new ImageBean();
+                        copy.setUri(imageBean.getUri());
+                        copy.setId(imageBean.getId());
+                        copy.setItemType(ImageListAdapter.ITEM_TYPE_SUB_ITEM);
+                        aGroupOfBeans.add(copy);
+                        localImageThumbnailIds.add(aGroupOfBeans);
                         folderNames.put(folderName, localImageThumbnailIds.size() - 1);
                     }
                 }
@@ -147,23 +165,31 @@ public class ImageLoader implements IImageLoader {
      */
     public class LoadImageRunnable extends BaseRunnable {
         private final ImageCache images;
-        private long id;
+        private ImageBean imageBean;
 
-        LoadImageRunnable(int priority, final long id, final Context context, final ImageCache images) {
+        LoadImageRunnable(int priority, final ImageBean imageBean, final Context context, final ImageCache images) {
             super(priority, context);
             if (priority < 0)
                 throw new IllegalArgumentException();
-            this.id = id;
+            this.imageBean = imageBean;
             this.images = images;
         }
 
 
         @Override
         void methodToRun(Context context) {
-            Bitmap image = MediaStore.Images.Thumbnails.getThumbnail(context.getContentResolver(), id, MICRO_KIND,
+            Bitmap image = MediaStore.Images.Thumbnails.getThumbnail(context.getContentResolver(), imageBean.getId(), MICRO_KIND,
                     null);
+            if (image == null) {
+                image = BitmapUtil.loadBitmapThumbnail(imageBean.getUri());
+                   if (image == null) {
+                       if (mDefaultBitmap == null)
+                           loadDefaultBitmap();
+                       image = mDefaultBitmap;
+                   }
+            }
             synchronized (images) {
-                images.putBitmap(id, image);
+                images.putBitmap(imageBean, image);
             }
             synchronized (mImageLoader) {
                 while (!mLoadImagePresenter.checkViewReadyToRefresh()) {
@@ -174,7 +200,7 @@ public class ImageLoader implements IImageLoader {
                         e.printStackTrace();
                     }
                 }
-                mLoadImagePresenter.refreshView(id);
+                mLoadImagePresenter.refreshView(imageBean);
             }
         }
     }

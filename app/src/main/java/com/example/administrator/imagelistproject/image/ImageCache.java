@@ -10,7 +10,7 @@ import android.util.LruCache;
 
 public class ImageCache {
     //定义LruCache，指定其key和保存数据的类型
-    private LruCache<Long, Bitmap> mImageCache;
+    private LruCache<ImageBean, Bitmap> mImageCache;
 
     public ImageCache() {
         //获取当前进程可以使用的内存大小，单位换算为KB
@@ -20,22 +20,22 @@ public class ImageCache {
         final int cacheSize = maxMemory / 4;
 
         //初始化LruCache
-        mImageCache = new LruCache<Long, Bitmap>(cacheSize) {
+        mImageCache = new LruCache<ImageBean, Bitmap>(cacheSize) {
             //定义每一个存储对象的大小
             @Override
-            protected int sizeOf(Long key, Bitmap bitmap) {
+            protected int sizeOf(ImageBean key, Bitmap bitmap) {
                 return bitmap.getRowBytes() * bitmap.getHeight() / 1024;
             }
         };
     }
 
     //获取数据
-    public Bitmap getBitmap(Long url) {
-        return mImageCache.get(url);
+    public Bitmap getBitmap(ImageBean imageBean) {
+        return mImageCache.get(imageBean);
     }
 
     //存储数据
-    void putBitmap(Long url, Bitmap bitmap) {
-        mImageCache.put(url, bitmap);
+    void putBitmap(ImageBean imageBean, Bitmap bitmap) {
+        mImageCache.put(imageBean, bitmap);
     }
 }

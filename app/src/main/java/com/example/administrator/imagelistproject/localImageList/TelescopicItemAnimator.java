@@ -131,6 +131,7 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
      * 计算Remove向左和向右平移的距离
      */
     private void calculateTranslateX() {
+        if(mClickedView == null) return;
         translateRightX = Integer.MIN_VALUE;
         translateLeftX = Integer.MIN_VALUE;
         for (RecyclerView.ViewHolder holder : mPendingRemovals) {
@@ -147,12 +148,17 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
 
     @Override
     public boolean animateRemove(final RecyclerView.ViewHolder holder) {
-        resetAnimation(holder);
-        mPendingRemovals.add(holder);
-        return true;
+        if (mClickedView != null) {
+            resetAnimation(holder);
+            mPendingRemovals.add(holder);
+            return true;
+        }else {
+            return false;
+        }
     }
 
     private void animateRemoveImpl(final RecyclerView.ViewHolder holder) {
+        if (mClickedView == null) return;
         final View view = holder.itemView;
         final ViewPropertyAnimator animation = view.animate();
         mRemoveAnimations.add(holder);
@@ -163,7 +169,9 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
                 animation.translationX((mClickedView.getLeft() + mClickedView.getRight()) / 2 - (view.getLeft() + view.getRight()) / 2);
             } else {
                 //SubView向前一个点击的View收缩平移
+                if (mLastClickedView != null){
                 animation.translationX((mLastClickedView.getLeft() + mLastClickedView.getRight()) / 2 - (view.getLeft() + view.getRight()) / 2);
+                }
             }
         } else {
             //不是SubView的话，在点击的View左边的向左平移，在右边的向右平移
@@ -205,6 +213,7 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
     }
 
     private void animateAddImpl(final RecyclerView.ViewHolder holder) {
+        if (mClickedView == null) return;
         final View view = holder.itemView;
         final ViewPropertyAnimator animation = view.animate();
         mAddAnimations.add(holder);
@@ -330,7 +339,7 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
             mChangeAnimations.add(changeInfo.oldHolder);
             oldViewAnim.translationX(changeInfo.toX - changeInfo.fromX);
             oldViewAnim.translationY(changeInfo.toY - changeInfo.fromY);
-            oldViewAnim.setListener(new AnimatorListenerAdapter() {
+            oldViewAnim.alpha(0).setListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationStart(Animator animator) {
                     dispatchChangeStarting(changeInfo.oldHolder, true);
@@ -339,6 +348,7 @@ public class TelescopicItemAnimator extends SimpleItemAnimator {
                 @Override
                 public void onAnimationEnd(Animator animator) {
                     oldViewAnim.setListener(null);
+                    view.setAlpha(1);
                     view.setTranslationX(0);
                     view.setTranslationY(0);
                     dispatchChangeFinished(changeInfo.oldHolder, true);
