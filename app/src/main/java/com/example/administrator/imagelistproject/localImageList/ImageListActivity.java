@@ -9,7 +9,6 @@ import android.view.View;
 import android.widget.ProgressBar;
 
 import com.example.administrator.imagelistproject.R;
-import com.example.administrator.imagelistproject.application.ImageListApplication;
 import com.example.administrator.imagelistproject.image.ImageBean;
 import com.example.administrator.imagelistproject.image.ImageCache;
 import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
@@ -100,14 +99,14 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                         }
                     }
                     //防止越界
-                    if (index<0||index>=mAllImageIds.size()) return;
+                    if (index < 0 || index >= mAllImageIds.size()) return;
                     //将点击Item所属mData的项从第二张图片开始导入到mDataToShow中
                     ArrayList<ImageBean> newData = mAllImageIds.get(index);
                     //遍历所有id对应的position，假如position大于所添加位置，则该position会发生变化，变为position+newData.size()
                     for (Map.Entry<ImageBean, Integer> entry : mImageIdAndItsPositionInShowingImageList.entrySet()) {
                         int entryPosition = entry.getValue();
                         if (entryPosition > position)
-                            entry.setValue(entryPosition + newData.size()-1);
+                            entry.setValue(entryPosition + newData.size() - 1);
                     }
                     for (int i = newData.size() - 1; i > 0; i--) {
                         ImageBean newImageBean = newData.get(i);
@@ -117,11 +116,11 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                         mImageIdAndItsPositionInShowingImageList.put(newImageBean, position + i);
                     }
                     //将position标记为被展开
-                    mMarkItemTypeList.set(position, newData.size()-1);
+                    mMarkItemTypeList.set(position, newData.size() - 1);
                     //执行该函数来触发Add动画
-                    mImageListAdapter.notifyItemRangeInserted(position + 1, newData.size()-1);
+                    mImageListAdapter.notifyItemRangeInserted(position + 1, newData.size() - 1);
                     //该操作用于更新RecyclerView的position，因为Add和Remove后RecyclerView中item的position没有自动更新，引起错乱
-                    mImageListAdapter.notifyItemRangeChanged(position + newData.size() , mShowingImageBeans.size() - 1 - (position + newData.size()-1), 0);
+                    mImageListAdapter.notifyItemRangeChanged(position + newData.size(), mShowingImageBeans.size() - 1 - (position + newData.size() - 1), 0);
                     //被点击项滑动至最左边
                     mLayoutManager.scrollToPositionWithOffset(position, 0);
                     //检查是否有其他的项被展开，有则记录下被展开的子项数目以及该展开项的position
@@ -151,7 +150,7 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                                     mShowingImageBeans.remove(finalExtendedItemPosition + 1);
                                     //列表同步
                                     mMarkItemTypeList.remove(finalExtendedItemPosition + 1);
-                                    mImageIdAndItsPositionInShowingImageList.remove(mAllImageIds.get(mLastExtendIndexInAllImageIds).get(i+1));
+                                    mImageIdAndItsPositionInShowingImageList.remove(mAllImageIds.get(mLastExtendIndexInAllImageIds).get(i + 1));
 
                                 }
                                 //遍历所有id对应的position，假如position大于所添加位置，则该position会发生变化，变为position-newData.size()
@@ -168,7 +167,7 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                                 //更新上一次被展开的list在mAllImageIds中的index
                                 mLastExtendIndexInAllImageIds = finalIndex;
                             }
-                        }, (long) (1.5f*ANIMATOR_INTERVAL_DEFAULT));
+                        }, (long) (1.5f * ANIMATOR_INTERVAL_DEFAULT));
                     } else {
                         //动画结束
                         animatorEnd();
@@ -298,8 +297,6 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mLoadImagePresenter.stopLoading();
         mImageListAdapter.cancelAllLoadTask();
-        ImageListApplication.getRefWatcher().watch(this);
     }
 }

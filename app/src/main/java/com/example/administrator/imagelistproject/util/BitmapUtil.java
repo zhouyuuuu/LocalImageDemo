@@ -2,8 +2,6 @@ package com.example.administrator.imagelistproject.util;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
-
 import com.example.administrator.imagelistproject.application.ImageListApplication;
 
 /**

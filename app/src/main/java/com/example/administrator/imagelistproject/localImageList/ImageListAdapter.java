@@ -46,24 +46,23 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
         mImageIdAndItsPositionInShowingImageList = imageIdAndItsPositionInShowingImageList;
     }
 
+
+    @NonNull
     @Override
-    public ImageListAdapter.ImageListViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public ImageListAdapter.ImageListViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v;
-        switch (viewType) {
-            case ITEM_TYPE_ITEM:
-                v = mLayoutInflater.inflate(R.layout.view_imagelist_item, parent, false);
-                return new ImageListViewHolder(v);
-            case ITEM_TYPE_SUB_ITEM:
-                v = mLayoutInflater.inflate(R.layout.view_imagelist_subitem, parent, false);
-                v.setTag(TelescopicItemAnimator.ITEM_TYPE_SUB_ITEM);
-                return new ImageListViewHolder(v);
-            default:
-                return null;
+        if (viewType == ITEM_TYPE_ITEM){
+            v = mLayoutInflater.inflate(R.layout.view_imagelist_item, parent, false);
+            return new ImageListViewHolder(v);
+        }else {
+            v = mLayoutInflater.inflate(R.layout.view_imagelist_subitem, parent, false);
+            v.setTag(TelescopicItemAnimator.ITEM_TYPE_SUB_ITEM);
+            return new ImageListViewHolder(v);
         }
     }
 
     @Override
-    public void onBindViewHolder(final ImageListAdapter.ImageListViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull final ImageListAdapter.ImageListViewHolder holder, int position) {
         //如果在mImages中不存在该图片，则先将ImageView设置为空，然后开线程去加载图片，待图片加载完成时会回调imageLoaded
         Bitmap image = mImageCache.getBitmap(mImageBeans.get(position));
         if (image != null) {
@@ -86,7 +85,7 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
      * 重写了这个方法，如果payloads不为空，就不重新绑定View了避免Change动画执行覆盖掉其他动画
      */
     @Override
-    public void onBindViewHolder(ImageListViewHolder holder, int position, List<Object> payloads) {
+    public void onBindViewHolder(@NonNull ImageListViewHolder holder, int position, @NonNull List<Object> payloads) {
         if (payloads.isEmpty()) {
             onBindViewHolder(holder, position);
         }
