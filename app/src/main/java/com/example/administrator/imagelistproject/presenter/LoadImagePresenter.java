@@ -79,4 +79,8 @@ public class LoadImagePresenter {
     public boolean checkViewReadyToRefresh() {
         return iImageList.isReadyToRefreshView();
     }
+
+    public void stopLoading(){
+        imageLoader.stopLoadingTask();
+    }
 }

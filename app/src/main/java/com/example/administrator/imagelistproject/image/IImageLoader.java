@@ -14,4 +14,6 @@ public interface IImageLoader {
     void ImageListIsReadyToRefreshViewCallback();
 
     void loadImageThumbnail(ImageBean imageBean, @NonNull Context context, @NonNull ImageCache images);
+
+    void stopLoadingTask();
 }

@@ -188,22 +188,26 @@ public class ImageLoader implements IImageLoader {
                        image = mDefaultBitmap;
                    }
             }
-            synchronized (images) {
-                images.putBitmap(imageBean, image);
-            }
-            synchronized (mImageLoader) {
-                while (!mLoadImagePresenter.checkViewReadyToRefresh()) {
-                    try {
-                        //先让线程wait，等到View的状态是可以更新的时候notify
-                        mImageLoader.wait();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+            if (images != null) {
+                synchronized (images) {
+                    images.putBitmap(imageBean, image);
                 }
-                mLoadImagePresenter.refreshView(imageBean);
+                synchronized (mImageLoader) {
+                    while (!mLoadImagePresenter.checkViewReadyToRefresh()) {
+                        try {
+                            //先让线程wait，等到View的状态是可以更新的时候notify
+                            mImageLoader.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    mLoadImagePresenter.refreshView(imageBean);
+                }
             }
         }
     }
 
-
+    public void stopLoadingTask(){
+        mThreadPoolExecutor.shutdown();
+    }
 }

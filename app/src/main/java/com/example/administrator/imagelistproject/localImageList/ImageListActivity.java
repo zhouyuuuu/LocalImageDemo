@@ -286,6 +286,8 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
                 mImageListAdapter.notifyDataSetChanged();
             }
         });
+        mLoadImagePresenter.stopLoading();
+        mLoadImagePresenter = null;
     }
 
     @Override
@@ -296,6 +298,8 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        mLoadImagePresenter.stopLoading();
+        mImageListAdapter.cancelAllLoadTask();
         ImageListApplication.getRefWatcher().watch(this);
     }
 }

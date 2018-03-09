@@ -161,4 +161,8 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
     void recyclerViewScrollStateIsIDEL(){
         mLoadImagePresenter.notifyIsReadyToRefreshView();
     }
+
+    void cancelAllLoadTask(){
+        mLoadImagePresenter.stopLoading();
+    }
 }
