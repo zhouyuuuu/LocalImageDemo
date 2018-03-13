@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 
 public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.ImageListViewHolder> implements IImageList {
+    private static final String TAG = "com.example.administrator.imagelistproject.localImageList.ImageListAdapter";
     public static final int ITEM_TYPE_ITEM = 101;
     public static final int ITEM_TYPE_SUB_ITEM = 102;//这个是被展开出来的子项
     private LayoutInflater mLayoutInflater;
@@ -126,7 +127,7 @@ public class ImageListAdapter extends RecyclerView.Adapter<ImageListAdapter.Imag
             mRvToBind.post(new Runnable() {
                 @Override
                 public void run() {
-                    LogUtil.e("~~~", "加载成功，更新了Item" + position);
+                    LogUtil.e(TAG, "imageThumbnailLoadedCallback : 加载成功，更新了Item" + position);
                     notifyItemChanged(position);
                 }
             });

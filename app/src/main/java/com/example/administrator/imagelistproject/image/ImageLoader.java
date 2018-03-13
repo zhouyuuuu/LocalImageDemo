@@ -11,6 +11,8 @@ import com.example.administrator.imagelistproject.application.ImageListApplicati
 import com.example.administrator.imagelistproject.localImageList.ImageListAdapter;
 import com.example.administrator.imagelistproject.presenter.LoadImagePresenter;
 import com.example.administrator.imagelistproject.util.BitmapUtil;
+
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -164,20 +166,22 @@ public class ImageLoader implements IImageLoader {
      * 加载图片的Runnable
      */
     public class LoadImageRunnable extends BaseRunnable {
-        private final ImageCache images;
-        private ImageBean imageBean;
+        private final WeakReference<ImageCache> imageCacheRef;
+        private WeakReference<ImageBean> imageBeanRef;
 
-        LoadImageRunnable(int priority, final ImageBean imageBean, final Context context, final ImageCache images) {
+        LoadImageRunnable(int priority, final ImageBean imageBeanRef, final Context context, final ImageCache imageCache) {
             super(priority, context);
             if (priority < 0)
                 throw new IllegalArgumentException();
-            this.imageBean = imageBean;
-            this.images = images;
+            this.imageBeanRef = new WeakReference<>(imageBeanRef);
+            this.imageCacheRef = new WeakReference<>(imageCache);
         }
 
 
         @Override
         void methodToRun(Context context) {
+            ImageBean imageBean = imageBeanRef.get();
+            if (imageBean == null) return;
             Bitmap image = MediaStore.Images.Thumbnails.getThumbnail(context.getContentResolver(), imageBean.getId(), MICRO_KIND,
                     null);
             if (image == null) {
@@ -188,9 +192,10 @@ public class ImageLoader implements IImageLoader {
                        image = mDefaultBitmap;
                    }
             }
-            if (images != null) {
-                synchronized (images) {
-                    images.putBitmap(imageBean, image);
+            ImageCache imageCache = imageCacheRef.get();
+            if (imageCache != null) {
+                synchronized (imageCache) {
+                    imageCache.putBitmap(imageBean, image);
                 }
                 synchronized (mImageLoader) {
                     while (!mLoadImagePresenter.checkViewReadyToRefresh()) {
@@ -208,6 +213,6 @@ public class ImageLoader implements IImageLoader {
     }
 
     public void stopLoadingTask(){
-        mThreadPoolExecutor.shutdown();
+        mThreadPoolExecutor.shutdownNow();
     }
 }

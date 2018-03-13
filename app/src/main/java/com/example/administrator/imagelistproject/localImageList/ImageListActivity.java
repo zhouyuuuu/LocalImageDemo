@@ -27,6 +27,7 @@ import static android.support.v7.widget.RecyclerView.SCROLL_STATE_IDLE;
 
 public class ImageListActivity extends AppCompatActivity implements IImageList {
 
+    private static final String TAG = "com.example.administrator.imagelistproject.localImageList.ImageListActivity";
     private static final int ANIMATOR_INTERVAL_DEFAULT = 200;//默认的动画时间
     private RecyclerView mRvImageList;
     private ArrayList<ArrayList<ImageBean>> mAllImageIds;//所有的图片ID数据
@@ -261,7 +262,7 @@ public class ImageListActivity extends AppCompatActivity implements IImageList {
             mRvImageList.post(new Runnable() {
                 @Override
                 public void run() {
-                    LogUtil.e("...", "加载成功，更新了Item" + position);
+                    LogUtil.e(TAG, "imageThumbnailLoadedCallback : 加载成功，更新了Item" + position);
                     mImageListAdapter.notifyItemChanged(position);
                 }
             });
