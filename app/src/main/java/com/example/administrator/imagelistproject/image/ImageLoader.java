@@ -27,12 +27,12 @@ import static android.provider.MediaStore.Images.Thumbnails.MICRO_KIND;
 public class ImageLoader implements IImageLoader {
 
     private final ImageLoader mImageLoader;
-    private LoadImagePresenter mLoadImagePresenter;
+    private WeakReference<LoadImagePresenter> mLoadImagePresenterRef;
     private ThreadPoolExecutor mThreadPoolExecutor;
     private Bitmap mDefaultBitmap;
 
     public ImageLoader(@NonNull LoadImagePresenter mLoadImagePresenter) {
-        this.mLoadImagePresenter = mLoadImagePresenter;
+        this.mLoadImagePresenterRef = new WeakReference<>(mLoadImagePresenter);
         //使用线程池来管理加载图片和询问数据库的耗时操作
         mThreadPoolExecutor = new ThreadPoolExecutor(6, 10, 10, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
         mImageLoader = this;
@@ -158,7 +158,10 @@ public class ImageLoader implements IImageLoader {
                 }
                 cursor.close();
             }
-            mLoadImagePresenter.notifyImageThumbnailLoaded(localImageThumbnailIds);
+            LoadImagePresenter loadImagePresenter = mLoadImagePresenterRef.get();
+            if (loadImagePresenter != null) {
+                loadImagePresenter.notifyImageThumbnailLoaded(localImageThumbnailIds);
+            }
         }
     }
 
@@ -197,16 +200,19 @@ public class ImageLoader implements IImageLoader {
                 synchronized (imageCache) {
                     imageCache.putBitmap(imageBean, image);
                 }
-                synchronized (mImageLoader) {
-                    while (!mLoadImagePresenter.checkViewReadyToRefresh()) {
-                        try {
-                            //先让线程wait，等到View的状态是可以更新的时候notify
-                            mImageLoader.wait();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                LoadImagePresenter loadImagePresenter = mLoadImagePresenterRef.get();
+                if (loadImagePresenter != null) {
+                    synchronized (mImageLoader) {
+                        while (!loadImagePresenter.checkViewReadyToRefresh()) {
+                            try {
+                                //先让线程wait，等到View的状态是可以更新的时候notify
+                                mImageLoader.wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
                         }
+                        loadImagePresenter.refreshView(imageBean);
                     }
-                    mLoadImagePresenter.refreshView(imageBean);
                 }
             }
         }
